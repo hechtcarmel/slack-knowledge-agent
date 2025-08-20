@@ -19,7 +19,12 @@ export class SlackClient {
 
   constructor(token: string) {
     this.client = new WebClient(token);
-    this.logger.info('SlackClient initialized');
+    // Log masked token for debugging
+    const maskedToken = token ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}` : 'NO_TOKEN';
+    this.logger.info('SlackClient initialized', { 
+      tokenPreview: maskedToken,
+      tokenLength: token?.length || 0 
+    });
   }
 
   async testConnection(): Promise<void> {
@@ -29,10 +34,22 @@ export class SlackClient {
         if (!result.ok) {
           throw new SlackError('Authentication failed', 'AUTH_FAILED', result);
         }
+        
+        // Log complete auth test response for debugging
         this.logger.info('Slack connection test successful', {
           botId: result.bot_id,
           userId: result.user_id,
           team: result.team,
+          teamId: result.team_id,
+          url: result.url,
+          isEnterpriseInstall: result.is_enterprise_install,
+        });
+
+        // Log the full result structure to see what scope info is available
+        this.logger.info('Auth test full response:', {
+          ...result,
+          // Mask the token if it's in the response
+          token: result.token ? 'MASKED' : undefined
         });
       });
     } catch (error) {
@@ -48,15 +65,42 @@ export class SlackClient {
   async getChannels(): Promise<Channel[]> {
     try {
       return await this.retryManager.executeWithRetry(async () => {
+        this.logger.info('Attempting conversations.list call...');
+        
+        // Try with just public channels first to isolate the scope issue
         const result = await this.client.conversations.list({
-          types: 'public_channel,private_channel',
+          types: 'public_channel',
           exclude_archived: true,
           limit: 1000,
         });
 
-        if (!result.ok || !result.channels) {
+        this.logger.info('conversations.list response:', {
+          ok: result.ok,
+          error: result.error,
+          needed: result.needed,
+          provided: result.provided,
+          channelCount: result.channels?.length || 0,
+          responseMetadata: result.response_metadata,
+        });
+
+        if (!result.ok) {
+          this.logger.error('conversations.list API error details:', {
+            error: result.error,
+            needed: result.needed,
+            provided: result.provided,
+            fullResponse: result
+          });
+          
           throw new SlackError(
-            'Failed to fetch channels',
+            `Slack API error: ${result.error}`,
+            'CHANNELS_FETCH_FAILED',
+            result
+          );
+        }
+
+        if (!result.channels) {
+          throw new SlackError(
+            'No channels returned from conversations.list',
             'CHANNELS_FETCH_FAILED',
             result
           );
