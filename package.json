@@ -19,6 +19,7 @@
     "frontend:preview": "cd frontend && pnpm run preview",
     "test": "pnpm run backend:test",
     "lint": "pnpm run backend:lint",
+    "lint:fix": "cd backend && pnpm run lint:fix",
     "typecheck": "pnpm run backend:typecheck",
     "prepare": "husky install"
   },

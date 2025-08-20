@@ -1,6 +1,9 @@
 {
-  "*.{ts,tsx}": [
-    "eslint --fix",
-    "prettier --write"
+  "backend/**/*.ts": [
+    "cd backend && eslint --fix",
+    "cd backend && prettier --write"
+  ],
+  "frontend/**/*.{ts,tsx}": [
+    "cd frontend && prettier --write"
   ]
 }
