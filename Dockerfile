@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Slack Knowledge Agent
 
 # Frontend build stage
-FROM node:20-alpine AS frontend-builder
+FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -22,7 +22,7 @@ COPY frontend/ .
 RUN pnpm run build
 
 # Backend build stage
-FROM node:20-alpine AS backend-builder
+FROM node:18-alpine AS backend-builder
 
 WORKDIR /app/backend
 
@@ -43,7 +43,7 @@ COPY backend/ .
 RUN pnpm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -55,7 +55,7 @@ COPY backend/package.json ./
 COPY backend/pnpm-lock.yaml* ./
 
 # Install production dependencies only
-RUN pnpm install --prod && pnpm cache clean --force
+RUN pnpm install --prod && pnpm store prune
 
 # Copy built backend application from builder stage
 COPY --from=backend-builder /app/backend/dist ./dist
