@@ -1,0 +1,14 @@
+{
+  "channels": [
+    {
+      "id": "C1234567890",
+      "name": "general",
+      "description": "Main discussion channel for team updates and announcements"
+    },
+    {
+      "id": "C0987654321",
+      "name": "engineering",
+      "description": "Technical discussions, code reviews, and engineering decisions"
+    }
+  ]
+}
