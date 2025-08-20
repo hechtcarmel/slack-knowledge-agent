@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  slack-knowledge-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4-turbo-preview}
+      - MAX_CONTEXT_TOKENS=${MAX_CONTEXT_TOKENS:-8000}
+      - MAX_HISTORY_DAYS=${MAX_HISTORY_DAYS:-90}
+      - DEFAULT_QUERY_LIMIT=${DEFAULT_QUERY_LIMIT:-50}
+      - MAX_QUERY_LIMIT=${MAX_QUERY_LIMIT:-200}
+    volumes:
+      - ./config:/app/config:ro
+    networks:
+      - slack-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Future: Add Redis for caching
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - slack-agent-network
+  #   restart: unless-stopped
+
+networks:
+  slack-agent-network:
+    driver: bridge

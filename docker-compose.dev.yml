@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  slack-knowledge-agent-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4-turbo-preview}
+      - MAX_CONTEXT_TOKENS=${MAX_CONTEXT_TOKENS:-8000}
+      - MAX_HISTORY_DAYS=${MAX_HISTORY_DAYS:-90}
+      - DEFAULT_QUERY_LIMIT=${DEFAULT_QUERY_LIMIT:-50}
+      - MAX_QUERY_LIMIT=${MAX_QUERY_LIMIT:-200}
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config
+      - /app/node_modules
+    networks:
+      - slack-agent-dev-network
+    restart: unless-stopped
+    command: pnpm run dev
+
+networks:
+  slack-agent-dev-network:
+    driver: bridge

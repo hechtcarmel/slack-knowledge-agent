@@ -1,0 +1,68 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build outputs
+dist
+build
+
+# Development files
+src
+tests
+.env*
+!.env.example
+
+# Documentation
+*.md
+docs/
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage
+.nyc_output
+
+# Temporary directories
+.tmp
+.temp
+
+# Cache
+.eslintcache
+.parcel-cache
+
+# Development tools
+nodemon.json
+jest.config.js
+.prettierrc
+.prettierignore
+.eslintrc.json
+tsconfig.json
+.husky
+
+# Frontend (if in same repo)
+frontend/
