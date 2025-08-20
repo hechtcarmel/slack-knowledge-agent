@@ -29,9 +29,17 @@ router.get(
       const detailedStatus = {
         ...basicStatus,
         services: {
-          slack: 'not_implemented', // Will be updated when Slack client is implemented
-          llm: 'not_implemented',   // Will be updated when LLM manager is implemented
-          config: 'healthy'
+          slack: {
+            status: 'disconnected' as const,
+            lastCheck: new Date().toISOString(),
+            error: 'Slack client not yet implemented'
+          },
+          llm: {
+            status: 'disconnected' as const,
+            provider: 'none',
+            lastCheck: new Date().toISOString(),
+            error: 'LLM provider not yet configured'
+          }
         },
         system: {
           memory: {

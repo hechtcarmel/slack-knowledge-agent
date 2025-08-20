@@ -1,18 +1,25 @@
-import { 
-  Channel, 
-  QueryRequest, 
-  QueryResponse, 
-  HealthStatus, 
+import {
+  Channel,
+  QueryRequest,
+  QueryResponse,
+  HealthStatus,
   LLMProvider,
-  ApiError 
+  ChannelsResponse,
 } from '@/types/api';
+
+import {
+  ChannelsResponseSchema,
+  HealthStatusSchema,
+  ApiErrorSchema,
+} from '@/lib/schemas';
 
 const API_BASE = '/api';
 
 class ApiClient {
   private async request<T>(
-    endpoint: string, 
-    options: RequestInit = {}
+    endpoint: string,
+    options: RequestInit = {},
+    schema?: any
   ): Promise<T> {
     const url = `${API_BASE}${endpoint}`;
     const config: RequestInit = {
@@ -25,13 +32,32 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData: ApiError = await response.json();
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        // Try to parse as API error first
+        try {
+          const errorData = ApiErrorSchema.parse(data);
+          throw new Error(errorData.error.message);
+        } catch {
+          // Fallback to generic error
+          throw new Error(
+            data.message || data.error || `HTTP ${response.status}`
+          );
+        }
       }
 
-      return await response.json();
+      // Validate response schema if provided
+      if (schema) {
+        try {
+          return schema.parse(data);
+        } catch (error) {
+          console.error('API response validation failed:', error);
+          throw new Error('Invalid response format from server');
+        }
+      }
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -41,11 +67,25 @@ class ApiClient {
   }
 
   async getHealth(): Promise<HealthStatus> {
-    return this.request<HealthStatus>('/health');
+    return this.request<HealthStatus>(
+      '/health?detailed=true',
+      {},
+      HealthStatusSchema
+    );
   }
 
   async getChannels(): Promise<Channel[]> {
-    return this.request<Channel[]>('/slack/channels');
+    const response = await this.request<ChannelsResponse>(
+      '/slack/channels',
+      {},
+      ChannelsResponseSchema
+    );
+
+    if (response.status === 'error') {
+      throw new Error(response.message);
+    }
+
+    return response.data.channels;
   }
 
   async submitQuery(query: QueryRequest): Promise<QueryResponse> {

@@ -3,8 +3,17 @@ export interface Channel {
   name: string;
   description?: string;
   memberCount?: number;
-  purpose?: string;
-  topic?: string;
+  purpose?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  topic?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  num_members?: number;
 }
 
 export interface Message {
@@ -90,3 +99,25 @@ export interface LLMProvider {
   status: 'available' | 'unavailable';
   currentModel?: string;
 }
+
+// API Response wrappers
+export interface SuccessResponse<T> {
+  status: 'success';
+  data: T;
+}
+
+export interface ErrorResponse {
+  status: 'error';
+  message: string;
+  error?: string;
+}
+
+export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
+
+// Specific API response types
+export interface ChannelsData {
+  channels: Channel[];
+  total: number;
+}
+
+export type ChannelsResponse = ApiResponse<ChannelsData>;

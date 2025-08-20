@@ -17,7 +17,9 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
 
   const filteredChannels = channels?.filter(channel =>
     channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    channel.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    channel.purpose?.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    channel.topic?.value.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   const handleChannelToggle = (channelId: string) => {
@@ -151,10 +153,10 @@ function ChannelCard({ channel, isSelected, onToggle }: ChannelCardProps) {
         <div className="flex items-center gap-2">
           <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="font-medium text-sm">{channel.name}</span>
-          {channel.memberCount !== undefined && (
+          {(channel.memberCount !== undefined || channel.num_members !== undefined) && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Users className="h-3 w-3" />
-              <span>{channel.memberCount}</span>
+              <span>{channel.memberCount ?? channel.num_members}</span>
             </div>
           )}
         </div>
@@ -163,9 +165,9 @@ function ChannelCard({ channel, isSelected, onToggle }: ChannelCardProps) {
             {channel.description}
           </p>
         )}
-        {channel.purpose && (
+        {channel.purpose?.value && (
           <p className="text-xs text-muted-foreground mt-1 italic">
-            Purpose: {channel.purpose}
+            Purpose: {channel.purpose.value}
           </p>
         )}
       </div>
