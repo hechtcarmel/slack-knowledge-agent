@@ -7,14 +7,14 @@ import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { ToolRegistry } from './tools/ToolRegistry.js';
 import { SlackTools } from './tools/SlackTools.js';
 
-import { 
+import {
   ILLMProvider,
   LLMProvider,
   LLMRequest,
   LLMMessage,
   LLMContext,
   LLMConfig,
-  ToolCall
+  ToolCall,
 } from './types.js';
 
 export class LLMManager {
@@ -22,7 +22,7 @@ export class LLMManager {
   private providers = new Map<LLMProvider, ILLMProvider>();
   private toolRegistry = new ToolRegistry();
   private currentProvider: LLMProvider = 'openai';
-  
+
   constructor(
     private openaiApiKey: string,
     private anthropicApiKey: string,
@@ -34,91 +34,103 @@ export class LLMManager {
 
   async initialize(): Promise<void> {
     this.logger.info('Initializing LLM Manager...');
-    
+
     // Validate provider configurations
     const validationResults = await Promise.all([
       this.validateProvider('openai'),
-      this.validateProvider('anthropic')
+      this.validateProvider('anthropic'),
     ]);
 
     const validProviders = validationResults.filter(result => result.valid);
-    
+
     if (validProviders.length === 0) {
       throw new LLMError('No valid LLM providers configured', 'NO_PROVIDERS');
     }
 
     // Set default provider to the first valid one
     this.currentProvider = validProviders[0].provider;
-    
+
     this.logger.info('LLM Manager initialized successfully', {
       validProviders: validProviders.map(p => p.provider),
       defaultProvider: this.currentProvider,
-      toolsRegistered: this.toolRegistry.size()
+      toolsRegistered: this.toolRegistry.size(),
     });
   }
 
-  async processQuery(context: LLMContext, config?: Partial<LLMConfig>): Promise<{
+  async processQuery(
+    context: LLMContext,
+    config?: Partial<LLMConfig>
+  ): Promise<{
     response: string;
-    usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number; cost_usd?: number };
+    usage: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+      cost_usd?: number;
+    };
     tool_calls?: number;
     provider: string;
     model: string;
   }> {
     const provider = this.getProvider(config?.provider || this.currentProvider);
-    const model = config?.model || (provider.name === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
-    
+    const model =
+      config?.model ||
+      (provider.name === 'openai'
+        ? 'gpt-4o-mini'
+        : 'claude-3-5-haiku-20241022');
+
     this.logger.info('Processing query', {
       provider: provider.name,
       model,
       query: context.query.substring(0, 100) + '...',
       channels: context.channelIds.length,
-      messages: context.messages.length
+      messages: context.messages.length,
     });
 
     // Build conversation messages
     const messages = this.buildMessages(context);
-    
+
     // Get available tools
     const tools = this.toolRegistry.list();
-    
+
     const request: LLMRequest = {
       messages,
       tools,
       tool_choice: 'auto',
       max_tokens: config?.max_tokens || 1000,
-      temperature: config?.temperature || 0.1
+      temperature: config?.temperature || 0.1,
     };
 
     let response = await provider.chat(request);
     let toolCallCount = 0;
-    let conversationMessages = [...messages];
-    
+    const conversationMessages = [...messages];
+
     // Handle tool calls
     while (response.tool_calls && response.tool_calls.length > 0) {
       toolCallCount += response.tool_calls.length;
-      
+
       // Add assistant message with tool calls
       conversationMessages.push({
         role: 'assistant',
         content: response.content,
-        tool_calls: response.tool_calls
+        tool_calls: response.tool_calls,
       });
 
       // Execute tools and add results
       const toolResults = await this.executeTools(response.tool_calls);
-      
+
       for (const result of toolResults) {
         conversationMessages.push({
           role: 'tool',
           content: JSON.stringify(result.data || { error: result.error }),
-          tool_call_id: result.tool_call_id
+          tool_call_id: result.tool_call_id,
         });
       }
 
       // Continue conversation with tool results
       const followUpRequest: LLMRequest = {
         ...request,
-        messages: conversationMessages
+        messages: conversationMessages,
       };
 
       response = await provider.chat(followUpRequest);
@@ -132,39 +144,43 @@ export class LLMManager {
       usage: response.usage,
       cost,
       toolCalls: toolCallCount,
-      responseLength: response.content.length
+      responseLength: response.content.length,
     });
 
     return {
       response: response.content,
       usage: {
         ...response.usage,
-        cost_usd: cost
+        cost_usd: cost,
       },
       tool_calls: toolCallCount,
       provider: provider.name,
-      model
+      model,
     };
   }
 
   async *streamQuery(
-    context: LLMContext, 
+    context: LLMContext,
     config?: Partial<LLMConfig>
   ): AsyncIterable<{
     content?: string;
     done?: boolean;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
   }> {
     const provider = this.getProvider(config?.provider || this.currentProvider);
     const messages = this.buildMessages(context);
     const tools = this.toolRegistry.list();
-    
+
     const request: LLMRequest = {
       messages,
       tools,
       tool_choice: 'auto',
       max_tokens: config?.max_tokens || 1000,
-      temperature: config?.temperature || 0.1
+      temperature: config?.temperature || 0.1,
     };
 
     try {
@@ -172,15 +188,19 @@ export class LLMManager {
         if (chunk.content) {
           yield { content: chunk.content };
         }
-        
+
         if (chunk.finish_reason === 'stop') {
-          yield chunk.usage ? { done: true, usage: chunk.usage } : { done: true };
+          yield chunk.usage
+            ? { done: true, usage: chunk.usage }
+            : { done: true };
           break;
         }
-        
+
         // TODO: Handle streaming tool calls
         if (chunk.tool_calls) {
-          yield chunk.usage ? { done: true, usage: chunk.usage } : { done: true };
+          yield chunk.usage
+            ? { done: true, usage: chunk.usage }
+            : { done: true };
           break;
         }
       }
@@ -192,9 +212,12 @@ export class LLMManager {
 
   setProvider(provider: LLMProvider): void {
     if (!this.providers.has(provider)) {
-      throw new LLMError(`Provider '${provider}' not available`, 'INVALID_PROVIDER');
+      throw new LLMError(
+        `Provider '${provider}' not available`,
+        'INVALID_PROVIDER'
+      );
     }
-    
+
     this.currentProvider = provider;
     this.logger.info(`Switched to provider: ${provider}`);
   }
@@ -216,21 +239,25 @@ export class LLMManager {
   } {
     const providerStatus: Record<string, boolean> = {};
     let healthyCount = 0;
-    
+
     for (const [name, _provider] of this.providers) {
       // This would ideally be cached from the last validation
       providerStatus[name] = true; // Simplified for now
       healthyCount++;
     }
-    
-    const status = healthyCount === 0 ? 'unhealthy' : 
-                  healthyCount < this.providers.size ? 'degraded' : 'healthy';
-    
+
+    const status =
+      healthyCount === 0
+        ? 'unhealthy'
+        : healthyCount < this.providers.size
+          ? 'degraded'
+          : 'healthy';
+
     return {
       status,
       providers: providerStatus,
       tools: this.toolRegistry.size(),
-      currentProvider: this.currentProvider
+      currentProvider: this.currentProvider,
     };
   }
 
@@ -238,19 +265,22 @@ export class LLMManager {
     if (this.openaiApiKey) {
       this.providers.set('openai', new OpenAIProvider(this.openaiApiKey));
     }
-    
+
     if (this.anthropicApiKey) {
-      this.providers.set('anthropic', new AnthropicProvider(this.anthropicApiKey));
+      this.providers.set(
+        'anthropic',
+        new AnthropicProvider(this.anthropicApiKey)
+      );
     }
 
     this.logger.info('Providers initialized', {
-      providers: Array.from(this.providers.keys())
+      providers: Array.from(this.providers.keys()),
     });
   }
 
   private initializeTools(): void {
     const slackTools = new SlackTools(this.slackService);
-    
+
     // Register Slack tools
     const tools = [
       slackTools.getSearchMessagesTool(),
@@ -258,7 +288,7 @@ export class LLMManager {
       slackTools.getThreadTool(),
       slackTools.getChannelInfoTool(),
       slackTools.getListFilesTool(),
-      slackTools.getFileContentTool()
+      slackTools.getFileContentTool(),
     ];
 
     for (const tool of tools) {
@@ -286,10 +316,10 @@ export class LLMManager {
       const isValid = await providerInstance.validateConfig();
       return { provider, valid: isValid };
     } catch (error) {
-      return { 
-        provider, 
-        valid: false, 
-        error: (error as Error).message 
+      return {
+        provider,
+        valid: false,
+        error: (error as Error).message,
       };
     }
   }
@@ -297,33 +327,38 @@ export class LLMManager {
   private getProvider(provider: LLMProvider): ILLMProvider {
     const providerInstance = this.providers.get(provider);
     if (!providerInstance) {
-      throw new LLMError(`Provider '${provider}' not available`, 'INVALID_PROVIDER');
+      throw new LLMError(
+        `Provider '${provider}' not available`,
+        'INVALID_PROVIDER'
+      );
     }
     return providerInstance;
   }
 
   private buildMessages(context: LLMContext): LLMMessage[] {
     const messages: LLMMessage[] = [];
-    
+
     // System message with context about the user's query
     const systemPrompt = this.buildSystemPrompt(context);
     messages.push({
       role: 'system',
-      content: systemPrompt
+      content: systemPrompt,
     });
 
     // User query
     messages.push({
       role: 'user',
-      content: context.query
+      content: context.query,
     });
 
     return messages;
   }
 
   private buildSystemPrompt(context: LLMContext): string {
-    const channelNames = context.metadata.channels.map(ch => ch.name).join(', ');
-    
+    const channelNames = context.metadata.channels
+      .map(ch => ch.name)
+      .join(', ');
+
     return `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
 
 You have access to the following Slack channels: ${channelNames}
@@ -350,37 +385,43 @@ Current query context:
 - Total messages in context: ${context.metadata.total_messages}`;
   }
 
-  private async executeTools(toolCalls: ToolCall[]): Promise<Array<{
-    tool_call_id: string;
-    data?: any;
-    error?: string;
-  }>> {
-    const results: Array<{ tool_call_id: string; data?: any; error?: string }> = [];
-    
+  private async executeTools(toolCalls: ToolCall[]): Promise<
+    Array<{
+      tool_call_id: string;
+      data?: any;
+      error?: string;
+    }>
+  > {
+    const results: Array<{ tool_call_id: string; data?: any; error?: string }> =
+      [];
+
     for (const toolCall of toolCalls) {
       try {
         const params = JSON.parse(toolCall.function.arguments);
-        const result = await this.toolRegistry.execute(toolCall.function.name, params);
-        
+        const result = await this.toolRegistry.execute(
+          toolCall.function.name,
+          params
+        );
+
         if (result.success) {
           results.push({
             tool_call_id: toolCall.id,
-            data: result.data
+            data: result.data,
           });
         } else {
           results.push({
             tool_call_id: toolCall.id,
-            error: result.error
+            error: result.error,
           });
         }
       } catch (error) {
         results.push({
           tool_call_id: toolCall.id,
-          error: `Failed to execute tool: ${(error as Error).message}`
+          error: `Failed to execute tool: ${(error as Error).message}`,
         });
       }
     }
-    
+
     return results;
   }
 }

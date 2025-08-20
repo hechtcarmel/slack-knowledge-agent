@@ -37,7 +37,6 @@ class SlackKnowledgeAgentServer {
       this.slackService
     );
     this.setupMiddleware();
-    this.setupRoutes();
     this.setupErrorHandling();
   }
   
@@ -82,7 +81,7 @@ class SlackKnowledgeAgentServer {
     this.app.use(requestLogger);
   }
   
-  private setupRoutes(): void {
+  private async setupRoutes(): Promise<void> {
     // Initialize service routes
     initializeSlackRoutes(this.slackService);
     initializeQueryRoutes(this.llmManager);
@@ -105,29 +104,42 @@ class SlackKnowledgeAgentServer {
       });
     });
     
-    // Root endpoint
-    this.app.get('/', (_req, res) => {
-      res.json({
-        message: 'Slack Knowledge Agent API',
-        version: '1.0.0',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-          health: '/api/health',
-          slack: {
-            health: '/api/slack/health',
-            channels: '/api/slack/channels',
-            search: '/api/slack/search',
-            files: '/api/slack/files'
-          },
-          query: {
-            process: '/api/query',
-            health: '/api/query/health',
-            providers: '/api/query/providers'
-          },
-          slackEvents: '/slack/events'
-        }
+    // Serve static frontend files in production
+    if (process.env.NODE_ENV === 'production') {
+      const path = await import('path');
+      
+      // Serve static files from public directory
+      this.app.use(express.static(path.join(process.cwd(), 'public')));
+      
+      // Serve frontend for all non-API routes (SPA routing)
+      this.app.get('*', (_req, res) => {
+        res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
       });
-    });
+    } else {
+      // Root endpoint for development/API info
+      this.app.get('/', (_req, res) => {
+        res.json({
+          message: 'Slack Knowledge Agent API',
+          version: '1.0.0',
+          timestamp: new Date().toISOString(),
+          endpoints: {
+            health: '/api/health',
+            slack: {
+              health: '/api/slack/health',
+              channels: '/api/slack/channels',
+              search: '/api/slack/search',
+              files: '/api/slack/files'
+            },
+            query: {
+              process: '/api/query',
+              health: '/api/query/health',
+              providers: '/api/query/providers'
+            },
+            slackEvents: '/slack/events'
+          }
+        });
+      });
+    }
   }
   
   private setupErrorHandling(): void {
@@ -194,6 +206,7 @@ class SlackKnowledgeAgentServer {
   public async start(): Promise<void> {
     try {
       await this.initializeConfig();
+      await this.setupRoutes();
       
       // Initialize services
       logger.info('Initializing Slack service...');

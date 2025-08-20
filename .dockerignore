@@ -7,8 +7,6 @@ dist
 build
 
 # Development files
-src
-tests
 .env*
 !.env.example
 
@@ -55,14 +53,16 @@ coverage
 .eslintcache
 .parcel-cache
 
-# Development tools
-nodemon.json
-jest.config.js
+# Development tools at root (backend and frontend have their own)
 .prettierrc
 .prettierignore
-.eslintrc.json
-tsconfig.json
 .husky
 
-# Frontend (if in same repo)
-frontend/
+# Frontend build artifacts (but not source needed for build)
+frontend/dist
+frontend/node_modules
+
+# Backend build artifacts (but not source needed for build)
+backend/dist
+backend/node_modules
+backend/tests

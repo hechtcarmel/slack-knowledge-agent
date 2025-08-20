@@ -12,17 +12,19 @@ const logger = Logger.create('QueryRoutes');
 const QuerySchema = z.object({
   question: z.string().min(1).max(2000),
   channels: z.array(z.string()).min(1).max(10),
-  options: z.object({
-    provider: z.enum(['openai', 'anthropic']).optional(),
-    model: z.string().optional(),
-    max_tokens: z.number().int().min(50).max(4000).optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    stream: z.boolean().default(false)
-  }).optional()
+  options: z
+    .object({
+      provider: z.enum(['openai', 'anthropic']).optional(),
+      model: z.string().optional(),
+      max_tokens: z.number().int().min(50).max(4000).optional(),
+      temperature: z.number().min(0).max(2).optional(),
+      stream: z.boolean().default(false),
+    })
+    .optional(),
 });
 
 const HealthSchema = z.object({
-  detailed: z.boolean().default(false)
+  detailed: z.boolean().default(false),
 });
 
 // Initialize LLMManager (will be injected by server)
@@ -35,15 +37,15 @@ export function initializeQueryRoutes(manager: LLMManager) {
 // POST /query - Process a knowledge query
 router.post('/', validateRequest(QuerySchema), async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     const { question, channels, options = {} } = req.body;
-    
+
     logger.info('Processing knowledge query', {
       question: question.substring(0, 100) + '...',
       channels,
       provider: options.provider,
-      stream: options.stream
+      stream: options.stream,
     });
 
     // Build LLM context - for now, we'll create a basic context
@@ -56,8 +58,8 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
         total_messages: 0,
         channels: channels.map((ch: string) => ({ id: ch, name: ch })),
         search_time_ms: 0,
-        token_count: 0
-      }
+        token_count: 0,
+      },
     };
 
     if (options.stream) {
@@ -65,9 +67,9 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
+        'Access-Control-Allow-Headers': 'Cache-Control',
       });
 
       try {
@@ -75,11 +77,11 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
           provider: options.provider,
           model: options.model,
           max_tokens: options.max_tokens,
-          temperature: options.temperature
+          temperature: options.temperature,
         })) {
           const data = JSON.stringify(chunk);
           res.write(`data: ${data}\n\n`);
-          
+
           if (chunk.done) {
             res.write('data: [DONE]\n\n');
             break;
@@ -87,7 +89,7 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
         }
       } catch (error) {
         const errorData = JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
         res.write(`data: ${errorData}\n\n`);
       } finally {
@@ -99,17 +101,17 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
         provider: options.provider,
         model: options.model,
         max_tokens: options.max_tokens,
-        temperature: options.temperature
+        temperature: options.temperature,
       });
 
       const responseTime = Date.now() - startTime;
-      
+
       logger.info('Query processed successfully', {
         responseTime,
         provider: result.provider,
         model: result.model,
         usage: result.usage,
-        toolCalls: result.tool_calls
+        toolCalls: result.tool_calls,
       });
 
       res.json({
@@ -121,21 +123,21 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
             model: result.model,
             usage: result.usage,
             tool_calls: result.tool_calls,
-            response_time_ms: responseTime
-          }
-        }
+            response_time_ms: responseTime,
+          },
+        },
       });
     }
   } catch (error) {
     logger.error('Query processing failed', error as Error, {
       question: req.body.question?.substring(0, 100),
-      channels: req.body.channels
+      channels: req.body.channels,
     });
-    
+
     if (res.headersSent) {
       // If streaming, send error through stream
       const errorData = JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       res.write(`data: ${errorData}\n\n`);
       res.end();
@@ -143,7 +145,7 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
       res.status(500).json({
         status: 'error',
         message: 'Query processing failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
@@ -154,30 +156,31 @@ router.get('/health', validateRequest(HealthSchema), async (req, res) => {
   try {
     const { detailed } = req.body;
     const health = llmManager.getHealthStatus();
-    
+
     if (detailed) {
       const providers = llmManager.getAvailableProviders();
       const providerModels: Record<string, string[]> = {};
-      
+
       for (const provider of providers) {
         try {
-          providerModels[provider] = await llmManager.getProviderModels(provider);
+          providerModels[provider] =
+            await llmManager.getProviderModels(provider);
         } catch (error) {
           providerModels[provider] = [];
         }
       }
-      
+
       res.json({
         status: 'success',
         data: {
           ...health,
-          available_models: providerModels
-        }
+          available_models: providerModels,
+        },
       });
     } else {
       res.json({
         status: 'success',
-        data: health
+        data: health,
       });
     }
   } catch (error) {
@@ -185,7 +188,7 @@ router.get('/health', validateRequest(HealthSchema), async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Health check failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -194,42 +197,45 @@ router.get('/health', validateRequest(HealthSchema), async (req, res) => {
 router.get('/providers', async (_req, res) => {
   try {
     const providers = llmManager.getAvailableProviders();
-    const providerDetails: Record<string, {
-      name: string;
-      available: boolean;
-      models: string[];
-    }> = {};
-    
+    const providerDetails: Record<
+      string,
+      {
+        name: string;
+        available: boolean;
+        models: string[];
+      }
+    > = {};
+
     for (const provider of providers) {
       try {
         const models = await llmManager.getProviderModels(provider);
         providerDetails[provider] = {
           name: provider,
           available: true,
-          models
+          models,
         };
       } catch (error) {
         providerDetails[provider] = {
           name: provider,
           available: false,
-          models: []
+          models: [],
         };
       }
     }
-    
+
     res.json({
       status: 'success',
       data: {
         providers: providerDetails,
-        total: providers.length
-      }
+        total: providers.length,
+      },
     });
   } catch (error) {
     logger.error('Failed to get providers', error as Error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to get providers',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -238,32 +244,32 @@ router.get('/providers', async (_req, res) => {
 router.post('/provider', async (req, res) => {
   try {
     const { provider } = req.body;
-    
+
     if (!provider || !['openai', 'anthropic'].includes(provider)) {
       res.status(400).json({
         status: 'error',
-        message: 'Invalid provider. Must be "openai" or "anthropic"'
+        message: 'Invalid provider. Must be "openai" or "anthropic"',
       });
       return;
     }
-    
+
     llmManager.setProvider(provider);
-    
+
     logger.info(`Provider switched to: ${provider}`);
-    
+
     res.json({
       status: 'success',
       data: {
         provider,
-        message: `Provider switched to ${provider}`
-      }
+        message: `Provider switched to ${provider}`,
+      },
     });
   } catch (error) {
     logger.error('Failed to switch provider', error as Error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to switch provider',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });

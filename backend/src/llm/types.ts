@@ -99,13 +99,13 @@ export type LLMProvider = 'openai' | 'anthropic';
 export interface ILLMProvider {
   name: string;
   models: string[];
-  
+
   chat(request: LLMRequest): Promise<LLMResponse>;
   streamChat(request: LLMRequest): AsyncIterable<Partial<LLMResponse>>;
-  
+
   validateConfig(): Promise<boolean>;
   getAvailableModels(): Promise<string[]>;
-  
+
   calculateTokens(messages: LLMMessage[]): number;
   calculateCost(usage: LLMUsage, model: string): number;
 }
@@ -115,8 +115,14 @@ export interface ToolFunction {
 }
 
 export interface ToolRegistry {
-  register(name: string, definition: ToolDefinition, handler: ToolFunction): void;
-  get(name: string): { definition: ToolDefinition; handler: ToolFunction } | undefined;
+  register(
+    name: string,
+    definition: ToolDefinition,
+    handler: ToolFunction
+  ): void;
+  get(
+    name: string
+  ): { definition: ToolDefinition; handler: ToolFunction } | undefined;
   list(): ToolDefinition[];
   execute(name: string, params: any): Promise<ToolExecutionResult>;
 }
