@@ -59,7 +59,7 @@ SLACK_APP_TOKEN=xapp-your-app-token
 OPENAI_API_KEY=sk-your-openai-key
 ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
 DEFAULT_LLM_PROVIDER=openai
-LLM_MODEL=gpt-4-turbo-preview
+LLM_MODEL=gpt-5
 MAX_CONTEXT_TOKENS=8000
 
 # Query Configuration

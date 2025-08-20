@@ -9,19 +9,25 @@ import { Logger } from '@/utils/logger.js';
 import { requestLogger } from '@/api/middleware/logging.middleware.js';
 import { errorHandler, notFoundHandler } from '@/api/middleware/error.middleware.js';
 
+// Service imports
+import { SlackService } from '@/services/SlackService.js';
+
 // Route imports
 import { healthRoutes } from '@/api/routes/health.routes.js';
+import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
 
 const logger = Logger.create('Server');
 
 class SlackKnowledgeAgentServer {
   private app: express.Application;
   private configManager: ConfigManager;
+  private slackService: SlackService;
   private config = getConfig();
   
   constructor() {
     this.app = express();
     this.configManager = new ConfigManager();
+    this.slackService = new SlackService(this.config.SLACK_BOT_TOKEN);
     this.setupMiddleware();
     this.setupRoutes();
     this.setupErrorHandling();
@@ -69,23 +75,20 @@ class SlackKnowledgeAgentServer {
   }
   
   private setupRoutes(): void {
+    // Initialize Slack routes with service instance
+    initializeSlackRoutes(this.slackService);
+    
     // Health check routes
     this.app.use('/api/health', healthRoutes);
     
-    // Placeholder routes (will be implemented)
-    this.app.get('/api/channels', (_req, res) => {
-      res.status(501).json({
-        error: {
-          message: 'Channels endpoint not yet implemented',
-          code: 'NOT_IMPLEMENTED'
-        }
-      });
-    });
+    // Slack API routes
+    this.app.use('/api/slack', slackRouter);
     
+    // Placeholder query endpoint (will integrate with LLM service)
     this.app.post('/api/query', (_req, res) => {
       res.status(501).json({
         error: {
-          message: 'Query endpoint not yet implemented',
+          message: 'Query endpoint not yet implemented - waiting for LLM integration',
           code: 'NOT_IMPLEMENTED'
         }
       });
@@ -108,7 +111,12 @@ class SlackKnowledgeAgentServer {
         timestamp: new Date().toISOString(),
         endpoints: {
           health: '/api/health',
-          channels: '/api/channels',
+          slack: {
+            health: '/api/slack/health',
+            channels: '/api/slack/channels',
+            search: '/api/slack/search',
+            files: '/api/slack/files'
+          },
           query: '/api/query',
           slackEvents: '/slack/events'
         }
@@ -180,6 +188,10 @@ class SlackKnowledgeAgentServer {
   public async start(): Promise<void> {
     try {
       await this.initializeConfig();
+      
+      // Initialize Slack service
+      logger.info('Initializing Slack service...');
+      await this.slackService.initialize();
       
       const server = this.app.listen(this.config.PORT, () => {
         logger.info('Server started successfully', {

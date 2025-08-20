@@ -1108,7 +1108,7 @@ const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().startsWith('sk-'),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-'),
   DEFAULT_LLM_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
-  LLM_MODEL: z.string().default('gpt-4-turbo-preview'),
+  LLM_MODEL: z.string().default('gpt-5'),
   MAX_CONTEXT_TOKENS: z.string().transform(Number).default('8000'),
   
   // Query limits
