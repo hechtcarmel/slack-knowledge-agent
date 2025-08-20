@@ -4,23 +4,22 @@ import { LLMManager } from '@/llm/LLMManager.js';
 import { Logger } from '@/utils/logger.js';
 import { validateRequest } from '@/middleware/validation.js';
 import { LLMContext } from '@/llm/types.js';
+import { QueryRequestSchema } from '@/api/validators/schemas.js';
 
 const router: ExpressRouter = Router();
 const logger = Logger.create('QueryRoutes');
 
-// Validation schemas
-const QuerySchema = z.object({
-  question: z.string().min(1).max(2000),
-  channels: z.array(z.string()).min(1).max(10),
-  options: z
-    .object({
-      provider: z.enum(['openai', 'anthropic']).optional(),
-      model: z.string().optional(),
-      max_tokens: z.number().int().min(50).max(4000).optional(),
-      temperature: z.number().min(0).max(2).optional(),
-      stream: z.boolean().default(false),
-    })
-    .optional(),
+// Validation schemas - extend the centralized schema with LLM-specific options
+const QueryOptionsSchema = z.object({
+  provider: z.enum(['openai', 'anthropic']).optional(),
+  model: z.string().optional(),
+  max_tokens: z.number().int().min(50).max(4000).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  stream: z.boolean().default(false),
+});
+
+const ExtendedQuerySchema = QueryRequestSchema.extend({
+  llmOptions: QueryOptionsSchema.optional(),
 });
 
 const HealthSchema = z.object({
@@ -35,23 +34,23 @@ export function initializeQueryRoutes(manager: LLMManager) {
 }
 
 // POST /query - Process a knowledge query
-router.post('/', validateRequest(QuerySchema), async (req, res) => {
+router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const { question, channels, options = {} } = req.body;
+    const { query, channels, context = {}, llmOptions = {} } = req.body;
 
     logger.info('Processing knowledge query', {
-      question: question.substring(0, 100) + '...',
+      query: query.substring(0, 100) + '...',
       channels,
-      provider: options.provider,
-      stream: options.stream,
+      provider: llmOptions.provider,
+      stream: llmOptions.stream,
     });
 
     // Build LLM context - for now, we'll create a basic context
     // In a full implementation, this would gather actual Slack data
-    const context: LLMContext = {
-      query: question,
+    const llmContext: LLMContext = {
+      query: query,
       channelIds: channels,
       messages: [], // Will be populated by tools
       metadata: {
@@ -62,7 +61,7 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
       },
     };
 
-    if (options.stream) {
+    if (llmOptions.stream) {
       // Set headers for streaming response
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -73,11 +72,11 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
       });
 
       try {
-        for await (const chunk of llmManager.streamQuery(context, {
-          provider: options.provider,
-          model: options.model,
-          max_tokens: options.max_tokens,
-          temperature: options.temperature,
+        for await (const chunk of llmManager.streamQuery(llmContext, {
+          provider: llmOptions.provider,
+          model: llmOptions.model,
+          max_tokens: llmOptions.max_tokens,
+          temperature: llmOptions.temperature,
         })) {
           const data = JSON.stringify(chunk);
           res.write(`data: ${data}\n\n`);
@@ -97,11 +96,11 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
       }
     } else {
       // Regular non-streaming response
-      const result = await llmManager.processQuery(context, {
-        provider: options.provider,
-        model: options.model,
-        max_tokens: options.max_tokens,
-        temperature: options.temperature,
+      const result = await llmManager.processQuery(llmContext, {
+        provider: llmOptions.provider,
+        model: llmOptions.model,
+        max_tokens: llmOptions.max_tokens,
+        temperature: llmOptions.temperature,
       });
 
       const responseTime = Date.now() - startTime;
@@ -130,7 +129,7 @@ router.post('/', validateRequest(QuerySchema), async (req, res) => {
     }
   } catch (error) {
     logger.error('Query processing failed', error as Error, {
-      question: req.body.question?.substring(0, 100),
+      query: req.body.query?.substring(0, 100),
       channels: req.body.channels,
     });
 

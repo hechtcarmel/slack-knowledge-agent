@@ -1,18 +1,21 @@
 import { z } from 'zod';
 
 export const QueryRequestSchema = z.object({
-  question: z
-    .string()
-    .min(1, 'Question cannot be empty')
-    .max(1000, 'Question too long'),
+  query: z.string().min(1, 'Query cannot be empty').max(1000, 'Query too long'),
   channels: z
     .array(z.string().regex(/^C[A-Z0-9]+$/, 'Invalid channel ID format'))
     .min(1, 'At least one channel must be selected')
     .max(20, 'Too many channels selected'),
-  options: z
+  context: z
     .object({
-      maxResults: z.number().min(1).max(200).optional(),
-      llmProvider: z.enum(['openai', 'anthropic']).optional(),
+      includeFiles: z.boolean().optional(),
+      includeThreads: z.boolean().optional(),
+      dateRange: z
+        .object({
+          start: z.string().optional(),
+          end: z.string().optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
