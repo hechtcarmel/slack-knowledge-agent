@@ -11,10 +11,12 @@ import { errorHandler, notFoundHandler } from '@/api/middleware/error.middleware
 
 // Service imports
 import { SlackService } from '@/services/SlackService.js';
+import { LLMManager } from '@/llm/LLMManager.js';
 
 // Route imports
 import { healthRoutes } from '@/api/routes/health.routes.js';
 import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
+import { queryRouter, initializeQueryRoutes } from '@/routes/query.js';
 
 const logger = Logger.create('Server');
 
@@ -22,12 +24,18 @@ class SlackKnowledgeAgentServer {
   private app: express.Application;
   private configManager: ConfigManager;
   private slackService: SlackService;
+  private llmManager: LLMManager;
   private config = getConfig();
   
   constructor() {
     this.app = express();
     this.configManager = new ConfigManager();
     this.slackService = new SlackService(this.config.SLACK_BOT_TOKEN);
+    this.llmManager = new LLMManager(
+      this.config.OPENAI_API_KEY,
+      this.config.ANTHROPIC_API_KEY || '',
+      this.slackService
+    );
     this.setupMiddleware();
     this.setupRoutes();
     this.setupErrorHandling();
@@ -75,8 +83,9 @@ class SlackKnowledgeAgentServer {
   }
   
   private setupRoutes(): void {
-    // Initialize Slack routes with service instance
+    // Initialize service routes
     initializeSlackRoutes(this.slackService);
+    initializeQueryRoutes(this.llmManager);
     
     // Health check routes
     this.app.use('/api/health', healthRoutes);
@@ -84,15 +93,8 @@ class SlackKnowledgeAgentServer {
     // Slack API routes
     this.app.use('/api/slack', slackRouter);
     
-    // Placeholder query endpoint (will integrate with LLM service)
-    this.app.post('/api/query', (_req, res) => {
-      res.status(501).json({
-        error: {
-          message: 'Query endpoint not yet implemented - waiting for LLM integration',
-          code: 'NOT_IMPLEMENTED'
-        }
-      });
-    });
+    // Query/LLM routes
+    this.app.use('/api/query', queryRouter);
     
     this.app.post('/slack/events', (_req, res) => {
       res.status(501).json({
@@ -117,7 +119,11 @@ class SlackKnowledgeAgentServer {
             search: '/api/slack/search',
             files: '/api/slack/files'
           },
-          query: '/api/query',
+          query: {
+            process: '/api/query',
+            health: '/api/query/health',
+            providers: '/api/query/providers'
+          },
           slackEvents: '/slack/events'
         }
       });
@@ -189,9 +195,12 @@ class SlackKnowledgeAgentServer {
     try {
       await this.initializeConfig();
       
-      // Initialize Slack service
+      // Initialize services
       logger.info('Initializing Slack service...');
       await this.slackService.initialize();
+      
+      logger.info('Initializing LLM manager...');
+      await this.llmManager.initialize();
       
       const server = this.app.listen(this.config.PORT, () => {
         logger.info('Server started successfully', {
