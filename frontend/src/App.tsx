@@ -8,7 +8,6 @@ import { AlertCircle, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { ErrorTestButton } from '@/components/ErrorTestButton';
 import slackLogo from '@/assets/slack-logo.png';
 
 
@@ -270,9 +269,6 @@ function App() {
           </ErrorBoundary>
         </div>
       </div>
-
-      {/* Development error testing */}
-      <ErrorTestButton />
     </div>
   );
 }
