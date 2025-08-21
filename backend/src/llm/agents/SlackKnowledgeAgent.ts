@@ -9,6 +9,7 @@ import {
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Logger } from '@/utils/logger.js';
 import { SlackConversationMemory } from '../memory/SlackMemory.js';
+import { SLACK_KNOWLEDGE_SYSTEM_PROMPT } from '../prompts/systemPrompts.js';
 
 export interface AgentConfig {
   maxIterations?: number;
@@ -45,28 +46,8 @@ export class SlackKnowledgeAgent {
         hasMemory: !!this.memory,
       });
 
-      // Create Tool Calling prompt template - channel info will be formatted dynamically
-      const systemMessage = `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
-
-Available channels to search:
-{channels}
-
-You have access to the following tools. The tool schemas will be automatically provided - use the exact parameter names and formats they specify:
-
-- get_channel_info: Get information about a Slack channel (requires: channel_id)
-- get_channel_history: Get recent messages from a specific Slack channel (requires: channel_id)  
-- search_messages: Search for messages across Slack channels (requires: query, channels array)
-- get_thread: Get all messages in a specific thread (requires: channel_id, thread_ts)
-- list_files: List files shared in Slack channels (requires: channels array)
-- get_file_content: Get the content of a text file from Slack (requires: file_id)
-
-IMPORTANT: 
-- Always use the exact parameter names and formats specified in the tool schemas
-- For channel parameters: use channel IDs (not channel names)
-- For search_messages: pass channels as an array, e.g., ["C09B8CNEQNR"] 
-- For single channel tools: use channel_id as a string
-
-Always use tools to gather information before responding. If you find relevant information, quote it with context (user and timestamp).`;
+      // Use enhanced system prompt with dynamic formatting
+      const systemMessage = SLACK_KNOWLEDGE_SYSTEM_PROMPT;
 
       const messagesList: any[] = [['system', systemMessage]];
 

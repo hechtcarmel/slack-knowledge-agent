@@ -43,10 +43,7 @@ export class SlackApiClient implements ISlackApiClient {
       this.userClient = new WebClient(config.userToken);
     }
 
-    this.retryManager = new RetryManager({
-      maxAttempts: config.maxRetries || 3,
-      backoffMs: config.retryBackoffMs || 1000,
-    });
+    this.retryManager = new RetryManager();
 
     // Log masked tokens for debugging
     const maskedBotToken = this.maskToken(config.botToken);
@@ -302,58 +299,121 @@ export class SlackApiClient implements ISlackApiClient {
   }
 
   /**
-   * Search messages
+   * Search messages with pagination support
    */
   public async searchMessages(params: SearchParams): Promise<Message[]> {
     try {
       return await this.retryManager.executeWithRetry(async () => {
-        let query = params.query;
+        let allMessages: Message[] = [];
+        let cursor = params.cursor || '*';
+        let pageCount = 0;
+        const maxPages = params.max_pages || 3;
+        let hasMore = true;
 
-        // Add date range if specified
-        if (params.time_range) {
-          const after = params.time_range.start.toISOString().split('T')[0];
-          const before = params.time_range.end.toISOString().split('T')[0];
-          query = `${query} after:${after} before:${before}`;
-        }
+        do {
+          let query = params.query;
 
-        // Use user client for search if available, otherwise fall back to bot client
-        const searchClient = this.userClient || this.client;
+          // Add date range if specified
+          if (params.time_range) {
+            const after = params.time_range.start.toISOString().split('T')[0];
+            const before = params.time_range.end.toISOString().split('T')[0];
+            query = `${query} after:${after} before:${before}`;
+          }
 
-        const result = await searchClient.search.messages({
-          query,
-          count: params.limit,
+          // Use user client for search if available, otherwise fall back to bot client
+          const searchClient = this.userClient || this.client;
+
+          this.logger.debug('Executing search with pagination', {
+            hasUserClient: !!this.userClient,
+            query,
+            count: params.limit,
+            cursor,
+            pageCount,
+            auto_paginate: params.auto_paginate,
+          });
+
+          const result = await searchClient.search.messages({
+            query,
+            count: params.limit,
+            ...(cursor && cursor !== '*' ? { cursor } : {}), // Only add cursor if it's not the initial value
+          });
+
+          if (!result.ok) {
+            throw new SlackError(
+              `Search failed: ${result.error}`,
+              'SEARCH_FAILED',
+              result
+            );
+          }
+
+          // Return empty array if no matches
+          if (!result.messages?.matches) {
+            break;
+          }
+
+          let matches = result.messages.matches;
+
+          // Filter by channels if specified
+          if (params.channels.length > 0) {
+            const channelSet = new Set(params.channels);
+            matches = matches.filter((match: any) => {
+              const matchChannelId = match.channel?.id;
+              const matchChannelName = match.channel?.name;
+              return (
+                channelSet.has(matchChannelId) ||
+                channelSet.has(matchChannelName)
+              );
+            });
+          }
+
+          const pageMessages = matches.map((match: any) =>
+            this.mapMessageFromApi(match, match.channel?.id || 'unknown')
+          );
+
+          allMessages.push(...pageMessages);
+
+          // Check if we should continue paginating
+          // Note: Slack API pagination structure may vary, using safe access
+          cursor =
+            (result.messages as any)?.paging?.next_cursor ||
+            (result as any)?.response_metadata?.next_cursor;
+          hasMore = !!cursor;
+          pageCount++;
+
+          this.logger.debug('Search page completed', {
+            pageCount,
+            messagesThisPage: pageMessages.length,
+            totalMessages: allMessages.length,
+            hasMore,
+            nextCursor: cursor,
+          });
+
+          // Auto-pagination decision logic
+          if (params.auto_paginate && hasMore && pageCount < maxPages) {
+            // Simple heuristic: continue if we got meaningful results this page
+            const shouldContinue =
+              pageMessages.length > 0 &&
+              pageMessages.length >= params.limit * 0.5;
+            if (!shouldContinue) {
+              this.logger.debug(
+                'Auto-pagination stopping due to low result quality'
+              );
+              break;
+            }
+          } else if (!params.auto_paginate) {
+            // If not auto-paginating, stop after first page
+            break;
+          }
+        } while (hasMore && pageCount < maxPages);
+
+        this.logger.info('Search with pagination completed', {
+          totalPages: pageCount,
+          totalMessages: allMessages.length,
+          finalCursor: cursor,
+          hasMore: hasMore && pageCount < maxPages,
         });
 
-        if (!result.ok) {
-          throw new SlackError(
-            `Search failed: ${result.error}`,
-            'SEARCH_FAILED',
-            result
-          );
-        }
-
-        // Return empty array if no matches
-        if (!result.messages?.matches) {
-          return [];
-        }
-
-        let matches = result.messages.matches;
-
-        // Filter by channels if specified
-        if (params.channels.length > 0) {
-          const channelSet = new Set(params.channels);
-          matches = matches.filter((match: any) => {
-            const matchChannelId = match.channel?.id;
-            const matchChannelName = match.channel?.name;
-            return (
-              channelSet.has(matchChannelId) || channelSet.has(matchChannelName)
-            );
-          });
-        }
-
-        return matches.map((match: any) =>
-          this.mapMessageFromApi(match, match.channel?.id || 'unknown')
-        );
+        return allMessages;
       });
     } catch (error) {
       this.logger.error('Failed to search messages', error as Error, {

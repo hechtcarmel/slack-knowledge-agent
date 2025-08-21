@@ -138,26 +138,18 @@ export function ChatContainer({
           <div className="flex items-center gap-3 min-w-0">
             {/* Add space for mobile hamburger menu */}
             <div className="lg:hidden w-10"></div>
-            <MessageSquare className="h-5 w-5 text-primary flex-shrink-0" />
-            <h1 className="text-lg font-semibold truncate">
-              {conversation?.title || 'New Chat'}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Desktop: Full status indicator */}
-            <div className="hidden lg:block">
-              <StatusIndicator />
-            </div>
-            
-            {/* Mobile: Compact status indicator */}
-            <div className="lg:hidden">
-              <div className="text-xs text-muted-foreground">
-                {selectedChannels.length} channels
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1 lg:gap-2">
+           <div className="flex items-center gap-1 lg:gap-2">
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNewConversation}
+                disabled={isLoading || !conversation}
+                className="lg:h-9 lg:px-3 h-8 px-2"
+              >
+                <Plus className="h-4 w-4 lg:mr-2" />
+                <span className="hidden lg:inline">New Chat</span>
+              </Button>
               {hasMessages && (
                 <Button
                   variant="outline"
@@ -191,17 +183,21 @@ export function ChatContainer({
                   )}
                 </Button>
               )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onNewConversation}
-                disabled={isLoading || !conversation}
-                className="lg:h-9 lg:px-3 h-8 px-2"
-              >
-                <Plus className="h-4 w-4 lg:mr-2" />
-                <span className="hidden lg:inline">New Chat</span>
-              </Button>
+            
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Desktop: Full status indicator */}
+            <div className="hidden lg:block">
+              <StatusIndicator />
+            </div>
+            
+            {/* Mobile: Compact status indicator */}
+            <div className="lg:hidden">
+              <div className="text-xs text-muted-foreground">
+                {selectedChannels.length} channels
+              </div>
             </div>
           </div>
         </div>

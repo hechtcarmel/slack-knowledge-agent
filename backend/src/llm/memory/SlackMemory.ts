@@ -43,6 +43,7 @@ export interface SlackMemoryConfig {
 export class SlackConversationMemory extends BaseMemory {
   private chatHistory = new InMemoryChatMessageHistory();
   private maxMessages: number;
+  private maxTokens: number;
   private sessionId?: string;
   private logger = Logger.create('SlackMemory');
 
@@ -51,6 +52,7 @@ export class SlackConversationMemory extends BaseMemory {
   constructor(config: SlackMemoryConfig = {}) {
     super();
     this.maxMessages = config.maxMessages || 20;
+    this.maxTokens = config.maxTokens || 2000; // Reasonable default for context window
     this.sessionId = config.sessionId;
   }
 
@@ -114,21 +116,49 @@ export class SlackConversationMemory extends BaseMemory {
    * Truncate messages to stay within token and message limits
    */
   private truncateMessages(messages: BaseMessage[]): BaseMessage[] {
-    // Simple implementation - keep last N messages
-    // In production, implement token-aware truncation
+    // Keep current simple logic as primary approach
     if (messages.length <= this.maxMessages) {
       return messages;
     }
 
-    const truncated = messages.slice(-this.maxMessages);
+    let truncated = messages.slice(-this.maxMessages);
 
-    this.logger.info('Messages truncated', {
-      originalCount: messages.length,
-      truncatedCount: truncated.length,
-      maxMessages: this.maxMessages,
-      sessionId: this.sessionId,
-    });
+    // Simple token check - if too long, reduce message count
+    const estimatedTokens = this.estimateTokenCount(truncated);
+    if (estimatedTokens > this.maxTokens) {
+      // Reduce to fewer messages if token limit exceeded
+      const targetMessages = Math.floor(this.maxMessages * 0.7); // 70% of max
+      truncated = messages.slice(-targetMessages);
+
+      this.logger.info('Messages further truncated due to token limit', {
+        originalCount: messages.length,
+        afterMessageLimit: this.maxMessages,
+        finalCount: truncated.length,
+        estimatedTokens: estimatedTokens,
+        maxTokens: this.maxTokens,
+        sessionId: this.sessionId,
+      });
+    } else {
+      this.logger.info('Messages truncated by message count only', {
+        originalCount: messages.length,
+        truncatedCount: truncated.length,
+        estimatedTokens: estimatedTokens,
+        maxMessages: this.maxMessages,
+        sessionId: this.sessionId,
+      });
+    }
 
     return truncated;
+  }
+
+  /**
+   * Estimate token count for messages using simple heuristic
+   */
+  private estimateTokenCount(messages: BaseMessage[]): number {
+    // Simple estimation: ~4 characters per token (OpenAI standard)
+    const totalChars = messages
+      .map(msg => msg.content.toString().length)
+      .reduce((sum, len) => sum + len, 0);
+    return Math.ceil(totalChars / 4);
   }
 }

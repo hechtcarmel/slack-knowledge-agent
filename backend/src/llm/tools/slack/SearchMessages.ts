@@ -23,7 +23,7 @@ const searchMessagesSchema = z.object({
     .min(1)
     .max(100)
     .default(20)
-    .describe('Maximum number of results to return (1-100, default: 20)'),
+    .describe('Maximum number of results per page (1-100, default: 20)'),
   days_back: z
     .number()
     .int()
@@ -33,6 +33,23 @@ const searchMessagesSchema = z.object({
     .describe(
       'Search messages from this many days back (optional, 1-365 days)'
     ),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      'Cursor for pagination - use "*" for first page, then next_cursor from previous response'
+    ),
+  max_pages: z
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .default(3)
+    .describe('Maximum pages to retrieve (safety limit, default: 3)'),
+  auto_paginate: z
+    .boolean()
+    .default(false)
+    .describe('Whether to automatically fetch additional pages if needed'),
 });
 
 export function createSearchMessagesTool(
@@ -43,7 +60,7 @@ export function createSearchMessagesTool(
   return new DynamicStructuredTool({
     name: 'search_messages',
     description:
-      'Search for messages across Slack channels. Use this to find information mentioned in conversations.',
+      'Search for messages across Slack channels with intelligent pagination support. Use this to find information mentioned in conversations. Set auto_paginate=true for comprehensive searches when you need thorough coverage.',
     schema: searchMessagesSchema,
     func: async (args: any) => {
       try {
@@ -90,6 +107,9 @@ export function createSearchMessagesTool(
                 end: new Date(),
               }
             : undefined,
+          cursor: args.cursor,
+          max_pages: args.max_pages,
+          auto_paginate: args.auto_paginate,
         };
 
         logger.debug('Search params after channel resolution', {
@@ -105,11 +125,16 @@ export function createSearchMessagesTool(
           query: args.query.substring(0, 50) + '...',
           originalChannels: args.channels,
           resolvedChannels,
+          autoPaginate: args.auto_paginate,
+          maxPages: args.max_pages,
         });
 
         // Return plain text for ReAct agent compatibility
         if (result.messages.length === 0) {
-          return `No messages found matching "${args.query}" in the specified channels.`;
+          const paginationNote = args.auto_paginate
+            ? ' (searched multiple pages automatically)'
+            : ' (single page search)';
+          return `No messages found matching "${args.query}" in the specified channels${paginationNote}.`;
         }
 
         // Format messages as readable text
@@ -127,7 +152,19 @@ export function createSearchMessagesTool(
         const totalCount = result.messages.length;
         const showingCount = Math.min(10, totalCount);
 
-        return `Found ${totalCount} messages matching "${args.query}"${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n\n${formattedMessages}`;
+        // Add pagination information to the response
+        let paginationInfo = '';
+        if (args.auto_paginate) {
+          paginationInfo = ` (auto-paginated through ${args.max_pages || 3} pages)`;
+        } else if (args.cursor && args.cursor !== '*') {
+          paginationInfo = ` (continued from previous search)`;
+        } else {
+          paginationInfo = ` (single page - use auto_paginate=true for comprehensive search)`;
+        }
+
+        // Note: We can't easily determine if there are more pages available from this level
+        // The SlackService would need to be updated to return pagination metadata
+        return `Found ${totalCount} messages matching "${args.query}"${paginationInfo}${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n\n${formattedMessages}`;
       } catch (error) {
         const errorMessage = `Error searching messages: ${(error as Error).message}`;
         logger.error('Message search failed', error as Error, {

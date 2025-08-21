@@ -75,6 +75,9 @@ export interface SearchParams {
     start: Date;
     end: Date;
   };
+  cursor?: string;
+  max_pages?: number;
+  auto_paginate?: boolean;
 }
 
 export interface FileListParams {

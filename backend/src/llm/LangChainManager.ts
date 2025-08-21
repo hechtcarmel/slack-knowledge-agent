@@ -492,20 +492,149 @@ export class LangChainManager {
   }
 
   private buildAgentContext(context: LLMContext): Record<string, any> {
-    // Build structured channel information with names, descriptions, and IDs
+    // Build enhanced channel information with relevance scoring
     const channelsData = context.metadata.channels.map(ch => ({
       id: ch.id,
       name: ch.name,
-      purpose: (ch as any).purpose || null,
-      topic: (ch as any).topic || null,
+      purpose: (ch as any).purpose || 'No purpose set',
+      topic: (ch as any).topic || 'No topic set',
+      memberCount: (ch as any).num_members || 'Unknown',
+      relevanceScore: this.calculateChannelRelevance(ch, context.query),
+      lastActivity: (ch as any).latest?.ts || 'Unknown',
+      channelType: (ch as any).is_private ? 'Private' : 'Public',
     }));
 
+    // Sort channels by relevance score (highest first)
+    channelsData.sort(
+      (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0)
+    );
+
     return {
-      channels: channelsData,
-      totalMessages: context.metadata.total_messages,
+      channels: this.formatChannelsForPrompt(channelsData),
       query: context.query,
-      availableTools: this.tools.map(tool => tool.name),
+      totalMessages: context.metadata.total_messages,
+      searchContext: {
+        timeframe: this.suggestTimeframe(context.query),
+        suggestedKeywords: this.extractKeywords(context.query),
+        relevantChannels: channelsData.slice(0, 5), // Top 5 most relevant
+      },
+      availableTools: this.getToolDescriptionsForPrompt(),
     };
+  }
+
+  private calculateChannelRelevance(channel: any, query: string): number {
+    let score = 0;
+    const queryWords = query.toLowerCase().split(/\s+/);
+
+    // Check channel name relevance
+    const channelName = (channel.name || '').toLowerCase();
+    queryWords.forEach(word => {
+      if (channelName.includes(word)) score += 2;
+    });
+
+    // Check channel purpose relevance
+    const purpose = ((channel as any).purpose || '').toLowerCase();
+    queryWords.forEach(word => {
+      if (purpose.includes(word)) score += 1;
+    });
+
+    // Check channel topic relevance
+    const topic = ((channel as any).topic || '').toLowerCase();
+    queryWords.forEach(word => {
+      if (topic.includes(word)) score += 1;
+    });
+
+    // Boost score for general channels that might contain diverse content
+    if (channelName.includes('general') || channelName.includes('announce')) {
+      score += 0.5;
+    }
+
+    return score;
+  }
+
+  private formatChannelsForPrompt(channels: any[]): string {
+    return channels
+      .map(
+        ch =>
+          `• #${ch.name} (${ch.id}) - ${ch.purpose}\n  Members: ${ch.memberCount}, Type: ${ch.channelType}, Relevance: ${ch.relevanceScore?.toFixed(2) || 'N/A'}`
+      )
+      .join('\n');
+  }
+
+  private suggestTimeframe(query: string): string {
+    const queryLower = query.toLowerCase();
+
+    if (
+      queryLower.includes('recent') ||
+      queryLower.includes('latest') ||
+      queryLower.includes('today')
+    ) {
+      return 'last 7 days';
+    } else if (
+      queryLower.includes('last month') ||
+      queryLower.includes('monthly')
+    ) {
+      return 'last 30 days';
+    } else if (
+      queryLower.includes('history') ||
+      queryLower.includes('evolution') ||
+      queryLower.includes('over time')
+    ) {
+      return 'last 365 days';
+    } else if (
+      queryLower.includes('quarter') ||
+      queryLower.includes('Q1') ||
+      queryLower.includes('Q2')
+    ) {
+      return 'last 90 days';
+    }
+
+    return 'last 30 days'; // Default timeframe
+  }
+
+  private extractKeywords(query: string): string[] {
+    // Simple keyword extraction - remove common words
+    const stopWords = new Set([
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'with',
+      'by',
+      'how',
+      'what',
+      'when',
+      'where',
+      'who',
+      'why',
+    ]);
+
+    return query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.has(word))
+      .slice(0, 5); // Limit to 5 keywords
+  }
+
+  private getToolDescriptionsForPrompt(): string[] {
+    return [
+      'search_messages: Primary discovery tool with pagination support',
+      'search_more_messages: Continue searching for additional relevant content',
+      'analyze_search_completeness: Evaluate if search coverage is sufficient',
+      'get_channel_history: Context building for specific timeframes',
+      'get_thread: Complete conversation understanding',
+      'get_channel_info: Channel purpose and context',
+      'list_files: Document discovery',
+      'get_file_content: Direct document access',
+    ];
   }
 
   private extractUsageInfo(

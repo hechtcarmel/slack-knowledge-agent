@@ -6,6 +6,8 @@ import { createGetChannelHistoryTool } from './slack/GetChannelHistory.js';
 import { createGetChannelInfoTool } from './slack/GetChannelInfo.js';
 import { createListFilesTool } from './slack/ListFiles.js';
 import { createGetFileContentTool } from './slack/GetFileContent.js';
+import { createSearchMoreMessagesTool } from './slack/SearchMoreMessages.js';
+import { createAnalyzeSearchCompletenessTool } from './slack/AnalyzeSearchCompleteness.js';
 
 /**
  * Creates all Slack-related tools for LangChain agents
@@ -20,6 +22,8 @@ export function createSlackTools(slackService: SlackService): any[] {
     createGetChannelInfoTool(slackService),
     createListFilesTool(slackService),
     createGetFileContentTool(slackService),
+    createSearchMoreMessagesTool(slackService),
+    createAnalyzeSearchCompletenessTool(), // This tool doesn't need slackService
   ];
 }
 
@@ -34,6 +38,8 @@ export function getSlackToolNames(): string[] {
     'get_channel_info',
     'list_files',
     'get_file_content',
+    'search_more_messages',
+    'analyze_search_completeness',
   ];
 }
 
@@ -45,4 +51,6 @@ export {
   createGetChannelInfoTool,
   createListFilesTool,
   createGetFileContentTool,
+  createSearchMoreMessagesTool,
+  createAnalyzeSearchCompletenessTool,
 };
