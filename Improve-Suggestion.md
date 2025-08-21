@@ -17,7 +17,7 @@ This document provides comprehensive recommendations for improving the LLM promp
 - ❌ **Prompt Inconsistency**: Multiple system prompts with unclear precedence
 - ❌ **Limited Search Strategy**: No guidance for iterative exploration
 - ❌ **Weak Context Management**: Simple channel info, no search history
-- ❌ **Poor Memory Management**: Count-based truncation, no semantic retention
+- ❌ **Memory Token Limits**: Message-based truncation may hit token limits with long responses
 - ❌ **Missing Tool Coordination**: No guidance for chaining tools effectively
 - ❌ **Scale Handling**: No strategies for large datasets or long conversations
 - ❌ **Insufficient Error Recovery**: Basic error messages, limited recovery strategies
@@ -172,86 +172,74 @@ private formatChannelsForPrompt(channels: any[]): string {
 }
 ```
 
-### 3. Advanced Memory Management
+### 3. Memory Management (Keep Current System)
 
-#### Current Memory Issues
-- Simple message count truncation
-- No semantic importance consideration
-- No search context preservation
+#### Current Memory Analysis
+The existing `SlackConversationMemory` system is actually well-designed and reliable:
 
-#### Recommended Enhanced Memory
+**What it does correctly:**
+- ✅ Simple message count truncation (keeps last 20 messages)
+- ✅ Stores user questions and AI responses in order
+- ✅ Predictable behavior - recent context is usually most relevant
+- ✅ Fast and reliable - no complex logic to break
+- ✅ Works well for typical conversation lengths
+
+#### Current Memory Issues (Minor)
+- ❌ **Token-unaware truncation**: Only counts messages, not token length
+- ❌ **Fixed message limit**: No adjustment based on message sizes
+
+#### Recommended Simple Improvements
+
+**Keep the current system but add basic token awareness:**
 
 ```typescript
-export class EnhancedSlackMemory extends BaseMemory {
-  private chatHistory = new InMemoryChatMessageHistory();
-  private searchHistory: SearchHistoryEntry[] = [];
-  private contextualInfo: Map<string, any> = new Map();
+// Minimal enhancement to existing SlackConversationMemory
+export class SlackConversationMemory extends BaseMemory {
   private maxMessages: number;
-  private maxTokens: number;
-  private logger = Logger.create('EnhancedSlackMemory');
+  private maxTokens: number; // Add token limit
 
-  interface SearchHistoryEntry {
-    query: string;
-    channels: string[];
-    timestamp: Date;
-    resultCount: number;
-    keyFindings: string[];
+  constructor(config: SlackMemoryConfig = {}) {
+    super();
+    this.maxMessages = config.maxMessages || 20;
+    this.maxTokens = config.maxTokens || 2000; // Reasonable default
   }
 
-  async loadMemoryVariables(_values: InputValues): Promise<MemoryVariables> {
-    const messages = await this.chatHistory.getMessages();
-    
-    // Smart truncation based on importance and relevance
-    const truncatedMessages = this.intelligentTruncation(messages);
-    
-    // Include search history context
-    const recentSearches = this.getRecentSearchHistory();
-    
-    // Build contextual memory prompt
-    const memoryContext = this.buildMemoryContext(truncatedMessages, recentSearches);
-
-    return {
-      chat_history: truncatedMessages,
-      search_history: this.formatSearchHistory(recentSearches),
-      contextual_insights: memoryContext
-    };
-  }
-
-  private intelligentTruncation(messages: BaseMessage[]): BaseMessage[] {
+  private truncateMessages(messages: BaseMessage[]): BaseMessage[] {
+    // Keep current simple logic as primary approach
     if (messages.length <= this.maxMessages) {
       return messages;
     }
 
-    // Score messages by importance
-    const scoredMessages = messages.map(msg => ({
-      message: msg,
-      importance: this.calculateMessageImportance(msg)
-    }));
+    let truncated = messages.slice(-this.maxMessages);
+    
+    // Simple token check - if too long, reduce message count
+    const estimatedTokens = this.estimateTokenCount(truncated);
+    if (estimatedTokens > this.maxTokens) {
+      // Reduce to fewer messages if token limit exceeded
+      const targetMessages = Math.floor(this.maxMessages * 0.7); // 70% of max
+      truncated = messages.slice(-targetMessages);
+    }
 
-    // Keep most recent + most important messages
-    const recent = scoredMessages.slice(-10); // Last 10 messages
-    const important = scoredMessages
-      .filter(sm => !recent.includes(sm))
-      .sort((a, b) => b.importance - a.importance)
-      .slice(0, this.maxMessages - 10);
-
-    return [...important, ...recent].map(sm => sm.message);
+    return truncated;
   }
 
-  private calculateMessageImportance(message: BaseMessage): number {
-    let score = 0;
-    const content = message.content.toString().toLowerCase();
-    
-    // Higher importance for messages with findings/results
-    if (content.includes('found') || content.includes('result')) score += 2;
-    if (content.includes('channel') || content.includes('thread')) score += 1;
-    if (content.includes('file') || content.includes('document')) score += 1;
-    if (content.includes('error') || content.includes('not found')) score -= 1;
-    
-    return score;
+  private estimateTokenCount(messages: BaseMessage[]): number {
+    // Simple estimation: ~4 characters per token
+    const totalChars = messages
+      .map(msg => msg.content.toString().length)
+      .reduce((sum, len) => sum + len, 0);
+    return Math.ceil(totalChars / 4);
   }
 }
 ```
+
+#### Why This Approach is Better
+
+1. **Keeps proven system**: Current memory works well, no need to replace it
+2. **Minimal risk**: Small enhancement, maintains predictable behavior  
+3. **Addresses real issue**: Token limits are a real constraint, message importance scoring is not
+4. **Simple to implement**: Just add token estimation, keep existing truncation logic
+5. **Easy to test**: Behavior is still predictable and debuggable
 
 ### 4. Tool Description Enhancements
 
@@ -705,7 +693,7 @@ class SlackService {
   4. Recommend verification if critical
 ```
 
-### 7. Response Formatting Guidelines
+### 8. Response Formatting Guidelines
 
 #### Add to system prompt:
 
@@ -741,14 +729,15 @@ class SlackService {
 ### Medium Priority (Significant Improvement)
 1. **Pagination-Aware Tools** - Add `search_more_messages` and completeness analysis tools
 2. **Enhanced Context Building** - More intelligent channel prioritization
-3. **Better Tool Descriptions** - Improved tool utilization with pagination guidance
-4. **Response Formatting Standards** - Consistent, high-quality outputs
+3. **Simple Memory Token Awareness** - Add basic token counting to existing memory system
+4. **Better Tool Descriptions** - Improved tool utilization with pagination guidance
+5. **Response Formatting Standards** - Consistent, high-quality outputs
 
 ### Low Priority (Future Enhancement)
-1. **Advanced Memory Management** - Semantic memory retention
-2. **Search History Integration** - Learning from past searches with pagination context
-3. **Dynamic Tool Selection** - Context-aware tool recommendations
-4. **Intelligent Auto-Pagination** - Advanced algorithms for relevance-based pagination decisions
+1. **Search History Integration** - Learning from past searches with pagination context
+2. **Dynamic Tool Selection** - Context-aware tool recommendations
+3. **Intelligent Auto-Pagination** - Advanced algorithms for relevance-based pagination decisions
+4. **Advanced Context Features** - Channel activity patterns, user expertise mapping
 
 ## Metrics for Evaluation
 
@@ -765,12 +754,12 @@ class SlackService {
 - Search result relevance degradation across pages
 - Common error scenarios and recovery success
 - Search strategy optimization opportunities
-- Memory management effectiveness
+- Token limit incidents and memory truncation patterns
 - Page retrieval efficiency vs. information gain
 
 ## Conclusion
 
-These improvements will transform the Slack Knowledge Agent from a basic search tool into an intelligent information discovery system. The enhanced prompts provide clear guidance for systematic exploration, while the improved context and memory management enable more sophisticated reasoning about complex queries.
+These improvements will transform the Slack Knowledge Agent from a basic search tool into an intelligent information discovery system. The enhanced prompts provide clear guidance for systematic exploration, while the improved context management and pagination support enable more sophisticated reasoning about complex queries.
 
 The key to success is the combination of:
 1. **Strategic Thinking**: Systematic approach to information discovery
