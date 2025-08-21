@@ -1,18 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { ChannelSelector } from '@/components/ChannelSelector';
 import { useChannelsQuery } from '@/hooks/api';
 import { useSendMessageMutation } from '@/hooks/chat';
 import { ConversationOptions, ChatMessage } from '@/types/chat';
 import { AlertCircle } from 'lucide-react';
+import slackLogo from '@/assets/slack-logo.png';
 
 
 function App() {
-  // Simple state management - no persistence
+  // State management with localStorage persistence
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load selected channels from localStorage on mount
+  useEffect(() => {
+    const savedChannels = localStorage.getItem('slack-agent-selected-channels');
+    if (savedChannels) {
+      try {
+        const parsed = JSON.parse(savedChannels);
+        if (Array.isArray(parsed)) {
+          setSelectedChannels(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved channels from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save selected channels to localStorage whenever selection changes
+  useEffect(() => {
+    localStorage.setItem('slack-agent-selected-channels', JSON.stringify(selectedChannels));
+  }, [selectedChannels]);
 
   // API hooks
   const channelsQuery = useChannelsQuery();
@@ -110,7 +131,10 @@ function App() {
         {/* Channel Selection Sidebar */}
         <div className="w-80 border-r border-border bg-card flex flex-col h-full">
           <div className="p-4 border-b border-border">
-            <h2 className="text-lg font-semibold mb-4">Slack Knowledge Agent</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <img src={slackLogo} alt="Slack" className="h-8 w-8" />
+              <h2 className="text-lg font-semibold">Slack Knowledge Agent</h2>
+            </div>
             
             {/* Channel Selection */}
             <div className="space-y-4">

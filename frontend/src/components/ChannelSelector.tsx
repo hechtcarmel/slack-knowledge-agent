@@ -5,7 +5,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Hash, Users, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Hash, Users, Search, Info } from 'lucide-react';
 import { Channel } from '@/types/api';
 
 interface ChannelSelectorProps {
@@ -101,22 +103,20 @@ export function ChannelSelector({
             filteredChannels.map((channel) => (
               <div
                 key={channel.id}
-                className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-accent-foreground/20 transition-colors cursor-pointer"
-                onClick={() => handleChannelToggle(channel.id)}
+                className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-accent-foreground/20 transition-colors"
               >
                 <Checkbox
                   checked={selectedChannels.includes(channel.id)}
                   onCheckedChange={() => handleChannelToggle(channel.id)}
                   className="mt-0.5"
                 />
-                <div className="flex-1 min-w-0">
+                <div 
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => handleChannelToggle(channel.id)}
+                >
                   <div className="flex items-center gap-2 mb-1">
                     <Hash className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="font-medium text-sm">{channel.name}</span>
-                    <Badge variant="outline" className="ml-auto flex-shrink-0">
-                      <Users className="h-3 w-3 mr-1" />
-                      {channel.num_members}
-                    </Badge>
                   </div>
                   {(channel.purpose?.value || channel.topic?.value) && (
                     <p className="text-xs text-muted-foreground line-clamp-2">
@@ -124,6 +124,72 @@ export function ChannelSelector({
                     </p>
                   )}
                 </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <Info className="h-3 w-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Hash className="h-4 w-4 text-primary" />
+                        {channel.name}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Channel information and details
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Members</span>
+                          <Badge variant="outline">{channel.num_members || 0}</Badge>
+                        </div>
+                      </div>
+                      
+                      {channel.purpose?.value && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Purpose</h4>
+                          <p className="text-sm text-muted-foreground">{channel.purpose.value}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Set by {channel.purpose.creator} on {new Date(channel.purpose.last_set * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {channel.topic?.value && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Topic</h4>
+                          <p className="text-sm text-muted-foreground">{channel.topic.value}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Set by {channel.topic.creator} on {new Date(channel.topic.last_set * 1000).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {channel.description && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Description</h4>
+                          <p className="text-sm text-muted-foreground">{channel.description}</p>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Channel ID</h4>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">{channel.id}</code>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             ))
           )}

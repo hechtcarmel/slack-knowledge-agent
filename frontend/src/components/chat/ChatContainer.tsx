@@ -10,7 +10,9 @@ import {
   MessageSquare, 
   Plus,
   Loader2,
-  Bot
+  Bot,
+  Copy,
+  CheckCheck
 } from 'lucide-react';
 
 interface ChatContainerProps {
@@ -36,6 +38,7 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [streamingMessageId] = useState(() => `streaming-${Date.now()}`);
+  const [chatCopied, setChatCopied] = useState(false);
   const { data: health, isLoading: healthLoading } = useHealthQuery();
 
   // Auto-scroll to bottom when new messages arrive
@@ -57,6 +60,23 @@ export function ChatContainer({
   }
 
   const hasMessages = displayMessages.length > 0;
+
+  // Copy whole chat functionality
+  const handleCopyWholeChat = async () => {
+    if (!conversation?.messages || conversation.messages.length === 0) return;
+    
+    try {
+      const chatText = conversation.messages
+        .map(msg => `${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content}`)
+        .join('\n\n');
+      
+      await navigator.clipboard.writeText(chatText);
+      setChatCopied(true);
+      setTimeout(() => setChatCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy chat:', error);
+    }
+  };
 
   // Status indicator component
   const StatusIndicator = () => {
@@ -123,16 +143,34 @@ export function ChatContainer({
 
           <div className="flex items-center gap-4">
             <StatusIndicator />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNewConversation}
-              disabled={isLoading || !conversation}
-              className="cursor-pointer disabled:cursor-not-allowed"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Chat
-            </Button>
+            <div className="flex items-center gap-2">
+              {hasMessages && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyWholeChat}
+                  disabled={isLoading}
+                  className="cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {chatCopied ? (
+                    <CheckCheck className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {chatCopied ? 'Copied!' : 'Copy Chat'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNewConversation}
+                disabled={isLoading || !conversation}
+                className="cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Chat
+              </Button>
+            </div>
           </div>
         </div>
       </div>

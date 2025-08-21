@@ -67,7 +67,7 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
       )}>
         {/* Message Bubble */}
         <div className={cn(
-          'rounded-lg px-4 py-3 shadow-sm relative',
+          'rounded-lg px-4 py-0 shadow-sm relative',
           isUser 
             ? 'bg-primary text-primary-foreground' 
             : 'bg-card border border-border',
@@ -185,58 +185,120 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
                 </DialogHeader>
                 
                 <div className="space-y-6">
-                  {/* Query Information */}
+                  {/* Query Flow Overview */}
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-sm">Query Information</h3>
-                    <div className="bg-muted p-3 rounded-md text-sm">
-                      <div>Provider: {message.metadata.llmProvider}</div>
+                    <h3 className="font-semibold text-sm">Query Flow Overview</h3>
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-md text-sm space-y-2">
+                      <div className="font-medium text-blue-900">Initial Request</div>
+                      <div className="text-blue-800">Provider: {message.metadata.llmProvider}</div>
                       {message.metadata.model && (
-                        <div>Model: {message.metadata.model}</div>
+                        <div className="text-blue-800">Model: {message.metadata.model}</div>
                       )}
                       {message.metadata.processingTime && (
-                        <div>Processing Time: {(message.metadata.processingTime / 1000).toFixed(1)}s</div>
+                        <div className="text-blue-800">Total Processing Time: {(message.metadata.processingTime / 1000).toFixed(1)}s</div>
                       )}
                       {message.metadata.tokenUsage && (
-                        <div>
-                          Tokens: {message.metadata.tokenUsage.prompt} prompt + {message.metadata.tokenUsage.completion} completion = {message.metadata.tokenUsage.total} total
+                        <div className="text-blue-800">
+                          <div className="font-medium mt-2 mb-1">Token Usage Breakdown:</div>
+                          <div className="ml-2 space-y-1">
+                            <div>• Prompt tokens: {(message.metadata.tokenUsage.prompt || 0).toLocaleString()}</div>
+                            <div>• Completion tokens: {(message.metadata.tokenUsage.completion || 0).toLocaleString()}</div>
+                            <div className="font-medium">• Total tokens: {(message.metadata.tokenUsage.total || 0).toLocaleString()}</div>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Tool Calls */}
-                  {message.metadata.toolCalls && (
+                  {/* Agent Interaction Flow */}
+                  {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">Tool Calls</h3>
-                      <div className="bg-muted p-3 rounded-md text-sm">
-                        <div>Number of tool calls: {message.metadata.toolCalls}</div>
+                      <h3 className="font-semibold text-sm">Agent Interaction Flow ({message.metadata.intermediateSteps.length} steps)</h3>
+                      <div className="text-xs text-muted-foreground mb-3">
+                        Complete trace of what was sent to the agent, tool calls made, and responses received
                       </div>
                     </div>
                   )}
 
-                  {/* Intermediate Steps */}
-                  {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
+                  {/* Enhanced Tool Calls Summary */}
+                  {(message.metadata.toolCalls || (message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0)) && (
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">Agent Steps ({message.metadata.intermediateSteps.length})</h3>
-                      <div className="space-y-3">
-                        {message.metadata.intermediateSteps.map((step, index) => (
-                          <div key={index} className="border rounded-md p-3 space-y-2">
-                            <div className="font-medium text-sm">Step {index + 1}: {step.action.tool}</div>
-                            <div className="text-sm">
-                              <div className="font-medium mb-1">Input:</div>
-                              <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">
-                                {JSON.stringify(step.action.toolInput, null, 2)}
-                              </pre>
+                      <h3 className="font-semibold text-sm">Tool Execution Summary</h3>
+                      <div className="bg-green-50 border border-green-200 p-3 rounded-md text-sm">
+                        <div className="text-green-800">
+                          {message.metadata.toolCalls ? (
+                            <div>Total tool calls made: {message.metadata.toolCalls}</div>
+                          ) : (
+                            <div>Total tool calls made: {message.metadata.intermediateSteps?.length || 0}</div>
+                          )}
+                          {message.metadata.intermediateSteps && (
+                            <div className="mt-1">
+                              Tools used: {[...new Set(message.metadata.intermediateSteps.map((step: any) => step.action?.tool || 'Unknown').filter(Boolean))].join(', ')}
                             </div>
-                            <div className="text-sm">
-                              <div className="font-medium mb-1">Output:</div>
-                              <div className="bg-muted p-2 rounded text-xs">
-                                {typeof step.observation === 'string' ? step.observation : JSON.stringify(step.observation, null, 2)}
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Agent Steps */}
+                  {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
+                    <div className="space-y-4">
+                      {message.metadata.intermediateSteps.map((step, index) => (
+                        <div key={index} className="border-2 border-slate-200 rounded-lg overflow-hidden">
+                          {/* Step Header */}
+                          <div className="bg-slate-100 px-4 py-2 border-b">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold">
+                                  {index + 1}
+                                </div>
+                                <span className="font-semibold text-sm">Tool: {step.action.tool}</span>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                Step {index + 1} of {message.metadata?.intermediateSteps?.length || 0}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="p-4 space-y-4">
+                            {/* Agent Reasoning */}
+                            {step.action.log && (
+                              <div className="space-y-2">
+                                <h5 className="font-semibold text-sm text-amber-700">🧠 Agent Reasoning</h5>
+                                <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                                  <pre className="whitespace-pre-wrap text-xs text-amber-800 font-mono">
+                                    {step.action.log}
+                                  </pre>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Input Sent to Tool */}
+                            <div className="space-y-2">
+                              <h5 className="font-semibold text-sm text-blue-700">📤 Input Sent to Tool</h5>
+                              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                <pre className="text-xs font-mono text-blue-800 overflow-x-auto">
+                                  {JSON.stringify(step.action.toolInput, null, 2)}
+                                </pre>
+                              </div>
+                            </div>
+
+                            {/* Response Received */}
+                            <div className="space-y-2">
+                              <h5 className="font-semibold text-sm text-green-700">📥 Response Received from Tool</h5>
+                              <div className="bg-green-50 border border-green-200 rounded p-3 max-h-48 overflow-y-auto">
+                                <pre className="text-xs font-mono text-green-800 whitespace-pre-wrap">
+                                  {typeof step.observation === 'string' 
+                                    ? step.observation 
+                                    : JSON.stringify(step.observation, null, 2)
+                                  }
+                                </pre>
                               </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
