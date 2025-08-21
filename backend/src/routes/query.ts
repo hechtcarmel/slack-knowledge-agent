@@ -1,6 +1,9 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { LangChainManager, type LLMContext } from '@/llm/LangChainManager.js';
+import {
+  ILLMService,
+  type LLMContext,
+} from '@/interfaces/services/ILLMService.js';
 import { Logger } from '@/utils/logger.js';
 import { validateRequest } from '@/middleware/validation.js';
 import { QueryRequestSchema } from '@/api/validators/schemas.js';
@@ -26,15 +29,15 @@ const HealthSchema = z.object({
   detailed: z.boolean().default(false),
 });
 
-// Initialize LangChainManager and SlackService (will be injected by server)
-let llmManager: LangChainManager;
+// Initialize LLM service and SlackService (will be injected by server)
+let llmService: ILLMService;
 let slackService: SlackService;
 
 export function initializeQueryRoutes(
-  manager: LangChainManager,
+  service: ILLMService,
   slack: SlackService
 ) {
-  llmManager = manager;
+  llmService = service;
   slackService = slack;
 }
 
@@ -86,10 +89,10 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       });
 
       try {
-        for await (const chunk of llmManager.streamQuery(llmContext, {
+        for await (const chunk of llmService.streamQuery(llmContext, {
           provider: llmOptions.provider,
           model: llmOptions.model,
-          max_tokens: llmOptions.max_tokens,
+          maxTokens: llmOptions.max_tokens,
           temperature: llmOptions.temperature,
         })) {
           const data = JSON.stringify(chunk);
@@ -110,10 +113,10 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       }
     } else {
       // Regular non-streaming response
-      const result = await llmManager.processQuery(llmContext, {
+      const result = await llmService.processQuery(llmContext, {
         provider: llmOptions.provider,
         model: llmOptions.model,
-        max_tokens: llmOptions.max_tokens,
+        maxTokens: llmOptions.max_tokens,
         temperature: llmOptions.temperature,
       });
 
@@ -135,7 +138,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
             provider: result.provider,
             model: result.model,
             usage: result.usage,
-            tool_calls: result.tool_calls,
+            tool_calls: result.toolCalls,
             response_time_ms: responseTime,
             intermediate_steps: result.intermediate_steps,
             execution_trace: {
@@ -174,16 +177,16 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
 router.get('/health', validateRequest(HealthSchema), async (req, res) => {
   try {
     const { detailed } = req.body;
-    const health = llmManager.getHealthStatus();
+    const health = llmService.getHealthStatus();
 
     if (detailed) {
-      const providers = llmManager.getAvailableProviders();
+      const providers = llmService.getAvailableProviders();
       const providerModels: Record<string, string[]> = {};
 
       for (const provider of providers) {
         try {
           providerModels[provider] =
-            await llmManager.getProviderModels(provider);
+            await llmService.getProviderModels(provider);
         } catch (error) {
           providerModels[provider] = [];
         }
@@ -215,7 +218,7 @@ router.get('/health', validateRequest(HealthSchema), async (req, res) => {
 // GET /query/providers - List available LLM providers
 router.get('/providers', async (_req, res) => {
   try {
-    const providers = llmManager.getAvailableProviders();
+    const providers = llmService.getAvailableProviders();
     const providerDetails: Record<
       string,
       {
@@ -227,7 +230,7 @@ router.get('/providers', async (_req, res) => {
 
     for (const provider of providers) {
       try {
-        const models = await llmManager.getProviderModels(provider);
+        const models = await llmService.getProviderModels(provider);
         providerDetails[provider] = {
           name: provider,
           available: true,
@@ -272,7 +275,7 @@ router.post('/provider', async (req, res) => {
       return;
     }
 
-    llmManager.setProvider(provider);
+    llmService.setProvider(provider);
 
     logger.info(`Provider switched to: ${provider}`);
 

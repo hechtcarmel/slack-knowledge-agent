@@ -21,6 +21,7 @@ export function createGetChannelInfoTool(
       try {
         logger.info('Getting channel info', {
           channel_id: args.channel_id,
+          receivedArgs: JSON.stringify(args),
         });
 
         const channel =

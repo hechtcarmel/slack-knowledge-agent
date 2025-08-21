@@ -3,7 +3,7 @@ import { validateQuery } from '@/api/middleware/validation.middleware.js';
 import { HealthQuerySchema } from '@/api/validators/schemas.js';
 import { Logger } from '@/utils/logger.js';
 import { SlackService } from '@/services/SlackService.js';
-import { LangChainManager } from '@/llm/LangChainManager.js';
+import { ILLMService } from '@/interfaces/services/ILLMService.js';
 import { getConfig } from '@/core/config/env.js';
 
 const logger = Logger.create('HealthRoutes');
@@ -11,14 +11,11 @@ const router: Router = Router();
 
 // Services will be injected by the server
 let slackService: SlackService;
-let llmManager: LangChainManager;
+let llmService: ILLMService;
 
-export function initializeHealthRoutes(
-  slack: SlackService,
-  llm: LangChainManager
-) {
+export function initializeHealthRoutes(slack: SlackService, llm: ILLMService) {
   slackService = slack;
-  llmManager = llm;
+  llmService = llm;
 }
 
 // Helper function to check Slack service status
@@ -104,17 +101,17 @@ async function checkSlackStatus() {
 async function checkLLMStatus() {
   const lastCheck = new Date().toISOString();
 
-  if (!llmManager) {
+  if (!llmService) {
     return {
       status: 'unavailable' as const,
       lastCheck,
-      error: 'LLM manager not initialized',
+      error: 'LLM service not initialized',
     };
   }
 
   try {
-    const health = llmManager.getHealthStatus();
-    const providers = llmManager.getAvailableProviders();
+    const health = llmService.getHealthStatus();
+    const providers = llmService.getAvailableProviders();
 
     return {
       status:

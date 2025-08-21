@@ -50,21 +50,22 @@ export class SlackKnowledgeAgent {
 
 Available channels to search: {channelNames}
 
-You have access to the following tools:
-- get_channel_history: Get recent messages from a specific Slack channel
-- get_channel_info: Get information about a Slack channel  
-- search_messages: Search for messages across Slack channels using keywords
-- get_thread: Get all messages in a specific thread
-- list_files: List files shared in Slack channels
-- get_file_content: Get the content of a text file from Slack
+You have access to the following tools. The tool schemas will be automatically provided - use the exact parameter names and formats they specify:
+
+- get_channel_info: Get information about a Slack channel (requires: channel_id)
+- get_channel_history: Get recent messages from a specific Slack channel (requires: channel_id)  
+- search_messages: Search for messages across Slack channels (requires: query, channels array)
+- get_thread: Get all messages in a specific thread (requires: channel_id, thread_ts)
+- list_files: List files shared in Slack channels (requires: channels array)
+- get_file_content: Get the content of a text file from Slack (requires: file_id)
 
 IMPORTANT: 
-- For specific searches (like finding mentions of a person), use search_messages
-- For browsing recent messages in a channel, use get_channel_history
-- When using tools that require a channel_id, use the actual channel ID (like {channelIds}), NOT the channel name
-- search_messages accepts both channel names and IDs
+- Always use the exact parameter names and formats specified in the tool schemas
+- For channel parameters: use channel IDs like {channelIds}, not channel names
+- For search_messages: pass channels as an array, e.g., ["C09B8CNEQNR"] 
+- For single channel tools: use channel_id as a string
 
-Always use tools to gather information before responding. Be specific about which channels you're searching. If you find relevant messages, quote them with context (user and timestamp).`;
+Always use tools to gather information before responding. If you find relevant information, quote it with context (user and timestamp).`;
 
       const messagesList: any[] = [['system', systemMessage]];
 

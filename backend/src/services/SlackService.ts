@@ -1,6 +1,7 @@
-import { SlackClient } from './SlackClient.js';
 import { Logger } from '@/utils/logger.js';
 import { SlackError } from '@/utils/errors.js';
+import { ISlackService } from '@/interfaces/services/ISlackService.js';
+import { ISlackApiClient } from '@/interfaces/services/ISlackApiClient.js';
 import {
   Channel,
   Message,
@@ -9,20 +10,24 @@ import {
   File,
 } from '@/types/index.js';
 
-export class SlackService {
-  private client: SlackClient;
+/**
+ * Slack business logic service
+ *
+ * This service implements the business logic for Slack operations,
+ * including caching, channel management, and message processing.
+ * It delegates actual API calls to the SlackApiClient.
+ */
+export class SlackService implements ISlackService {
   private logger = Logger.create('SlackService');
   private channelsCache: Map<string, Channel> = new Map();
   private cacheExpiry = 5 * 60 * 1000; // 5 minutes
   private lastCacheUpdate = 0;
 
-  constructor(botToken: string, userToken?: string) {
-    this.client = new SlackClient(botToken, userToken);
-  }
+  constructor(private apiClient: ISlackApiClient) {}
 
   async initialize(): Promise<void> {
     try {
-      await this.client.testConnection();
+      await this.apiClient.initialize();
       await this.refreshChannelsCache();
       this.logger.info('SlackService initialized successfully');
     } catch (error) {
@@ -60,7 +65,7 @@ export class SlackService {
       this.logger.debug('Channel not in cache, fetching directly from Slack', {
         channelId,
       });
-      const channel = await this.client.getChannelInfo(channelId);
+      const channel = await this.apiClient.getChannelInfo(channelId);
       if (channel) {
         // Add to cache for future use
         this.channelsCache.set(channel.id, channel);
@@ -113,7 +118,7 @@ export class SlackService {
 
         // Try to get a single message to test access
         try {
-          await this.client.getChannelHistory(channel.id, { limit: 1 });
+          await this.apiClient.getChannelHistory(channel.id, { limit: 1 });
           results.alreadyMember.push(channelId);
           this.logger.debug('Already have access to channel', { channelId });
         } catch (accessError: any) {
@@ -143,7 +148,7 @@ export class SlackService {
               { channelId }
             );
             try {
-              await this.client.joinChannel(channel.id);
+              await this.apiClient.joinChannel(channel.id);
               results.joined.push(channelId);
               this.logger.info('Successfully joined channel proactively', {
                 channelId,
@@ -210,7 +215,7 @@ export class SlackService {
       // Validate channel IDs
       const validChannels = await this.validateChannels(params.channels);
 
-      const messages = await this.client.searchMessages({
+      const messages = await this.apiClient.searchMessages({
         ...params,
         channels: validChannels.map(ch => ch.id),
       });
@@ -265,7 +270,10 @@ export class SlackService {
         );
       }
 
-      const messages = await this.client.getChannelHistory(channelId, options);
+      const messages = await this.apiClient.getChannelHistory(
+        channelId,
+        options
+      );
 
       let threadCount = 0;
       if (options.includeThreads) {
@@ -276,7 +284,7 @@ export class SlackService {
 
         for (const threadParent of threadsToFetch) {
           try {
-            const thread = await this.client.getThreadReplies(
+            const thread = await this.apiClient.getThreadReplies(
               channelId,
               threadParent.ts
             );
@@ -335,7 +343,7 @@ export class SlackService {
     try {
       const validChannels = await this.validateChannels(params.channels);
 
-      const files = await this.client.getFiles({
+      const files = await this.apiClient.getFiles({
         ...params,
         channels: validChannels.map(ch => ch.id),
       });
@@ -360,7 +368,7 @@ export class SlackService {
 
   async getFileContent(fileId: string): Promise<string> {
     try {
-      const fileContent = await this.client.getFileContent(fileId);
+      const fileContent = await this.apiClient.getFileContent(fileId);
 
       this.logger.info('File content retrieved', {
         fileId,
@@ -383,7 +391,7 @@ export class SlackService {
 
   async getUserInfo(userId: string): Promise<any> {
     try {
-      return await this.client.getUserInfo(userId);
+      return await this.apiClient.getUserInfo(userId);
     } catch (error) {
       this.logger.error('Failed to get user info', error as Error, { userId });
       throw new SlackError('Failed to get user info', 'USER_ERROR', error);
@@ -392,7 +400,7 @@ export class SlackService {
 
   private async refreshChannelsCache(): Promise<void> {
     try {
-      const channels = await this.client.getChannels();
+      const channels = await this.apiClient.getChannels();
 
       this.channelsCache.clear();
       channels.forEach(channel => {

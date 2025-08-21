@@ -5,16 +5,21 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon --exec tsx src/server_new.ts",
+    "dev:old": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server_new.js",
+    "start:old": "node dist/server.js",
     "test": "NODE_ENV=test jest --testPathPattern=tests/",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:integration": "tsx src/test-integration.ts",
+    "test:tools": "tsx src/test-tools.ts",
+    "migrate": "echo '🚀 Switching to refactored architecture...' && npm run test:integration"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
