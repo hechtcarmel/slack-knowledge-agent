@@ -16,7 +16,8 @@ export function useHealthQuery() {
   return useQuery({
     queryKey: queryKeys.health,
     queryFn: () => apiClient.getHealth(),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes before considering data stale
+    gcTime: 10 * 60 * 1000, // 10 minutes in cache (formerly cacheTime)
   });
 }
 
@@ -24,7 +25,8 @@ export function useSlackHealthQuery() {
   return useQuery({
     queryKey: queryKeys.slackHealth,
     queryFn: () => apiClient.getSlackHealth(),
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutes before considering data stale
+    gcTime: 10 * 60 * 1000, // 10 minutes in cache (formerly cacheTime)
   });
 }
 
@@ -32,7 +34,8 @@ export function useLLMHealthQuery() {
   return useQuery({
     queryKey: queryKeys.llmHealth,
     queryFn: () => apiClient.getLLMHealth(),
-    refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutes before considering data stale
+    gcTime: 10 * 60 * 1000, // 10 minutes in cache (formerly cacheTime)
   });
 }
 
@@ -56,7 +59,7 @@ export function useLLMProvidersQuery() {
 // Query mutation
 export function useSubmitQueryMutation() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (query: QueryRequest) => apiClient.submitQuery(query),
     onSuccess: () => {
@@ -70,7 +73,7 @@ export function useSubmitQueryMutation() {
 // Switch LLM provider mutation
 export function useSwitchLLMProviderMutation() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (providerId: string) => apiClient.switchLLMProvider(providerId),
     onSuccess: () => {

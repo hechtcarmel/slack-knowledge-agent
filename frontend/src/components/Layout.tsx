@@ -50,7 +50,7 @@ function StatusIndicator() {
           }`} 
         />
         <span className="text-muted-foreground">
-          {health?.services.llm.provider || 'LLM'}
+          {health?.services?.llm?.currentProvider || 'LLM'}
         </span>
       </div>
     </div>

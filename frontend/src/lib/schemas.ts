@@ -52,8 +52,19 @@ export const ServiceStatusSchema = z.object({
   error: z.string().optional(),
 });
 
+export const SlackServiceSchema = ServiceStatusSchema.extend({
+  channels: z.number().optional(),
+  cacheStatus: z.string().optional(),
+});
+
 export const LLMServiceSchema = ServiceStatusSchema.extend({
-  provider: z.string(),
+  currentProvider: z.string(),
+  availableProviders: z.array(z.string()),
+  toolsCount: z.number(),
+  memory: z.object({
+    enabled: z.boolean(),
+    messageCount: z.number(),
+  }),
 });
 
 export const HealthStatusSchema = z.object({
@@ -63,7 +74,7 @@ export const HealthStatusSchema = z.object({
   version: z.string().optional(),
   services: z
     .object({
-      slack: ServiceStatusSchema,
+      slack: SlackServiceSchema,
       llm: LLMServiceSchema,
     })
     .optional(),

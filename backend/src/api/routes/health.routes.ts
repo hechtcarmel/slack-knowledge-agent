@@ -2,9 +2,89 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { validateQuery } from '@/api/middleware/validation.middleware.js';
 import { HealthQuerySchema } from '@/api/validators/schemas.js';
 import { Logger } from '@/utils/logger.js';
+import { SlackService } from '@/services/SlackService.js';
+import { LangChainManager } from '@/llm/LangChainManager.js';
 
 const logger = Logger.create('HealthRoutes');
 const router: Router = Router();
+
+// Services will be injected by the server
+let slackService: SlackService;
+let llmManager: LangChainManager;
+
+export function initializeHealthRoutes(
+  slack: SlackService,
+  llm: LangChainManager
+) {
+  slackService = slack;
+  llmManager = llm;
+}
+
+// Helper function to check Slack service status
+async function checkSlackStatus() {
+  const lastCheck = new Date().toISOString();
+
+  if (!slackService) {
+    return {
+      status: 'unavailable' as const,
+      lastCheck,
+      error: 'Slack service not initialized',
+    };
+  }
+
+  try {
+    // Test by getting channels (cached, so it's fast)
+    const channels = await slackService.getChannels();
+    return {
+      status: 'connected' as const,
+      lastCheck,
+      channels: channels.length,
+      cacheStatus: 'active',
+    };
+  } catch (error) {
+    return {
+      status: 'error' as const,
+      lastCheck,
+      error: (error as Error).message,
+    };
+  }
+}
+
+// Helper function to check LLM service status
+async function checkLLMStatus() {
+  const lastCheck = new Date().toISOString();
+
+  if (!llmManager) {
+    return {
+      status: 'unavailable' as const,
+      lastCheck,
+      error: 'LLM manager not initialized',
+    };
+  }
+
+  try {
+    const health = llmManager.getHealthStatus();
+    const providers = llmManager.getAvailableProviders();
+
+    return {
+      status:
+        health.status === 'healthy'
+          ? ('connected' as const)
+          : ('degraded' as const),
+      lastCheck,
+      currentProvider: health.currentProvider,
+      availableProviders: providers,
+      toolsCount: health.tools,
+      memory: health.memory,
+    };
+  } catch (error) {
+    return {
+      status: 'error' as const,
+      lastCheck,
+      error: (error as Error).message,
+    };
+  }
+}
 
 router.get(
   '/',
@@ -25,21 +105,15 @@ router.get(
         return;
       }
 
-      // Detailed health check would include service status
+      // Detailed health check with actual service status
+      const slackStatus = await checkSlackStatus();
+      const llmStatus = await checkLLMStatus();
+
       const detailedStatus = {
         ...basicStatus,
         services: {
-          slack: {
-            status: 'disconnected' as const,
-            lastCheck: new Date().toISOString(),
-            error: 'Slack client not yet implemented',
-          },
-          llm: {
-            status: 'disconnected' as const,
-            provider: 'none',
-            lastCheck: new Date().toISOString(),
-            error: 'LLM provider not yet configured',
-          },
+          slack: slackStatus,
+          llm: llmStatus,
         },
         system: {
           memory: {

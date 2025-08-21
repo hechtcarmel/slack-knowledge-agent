@@ -17,7 +17,10 @@ import { SlackService } from '@/services/SlackService.js';
 import { LangChainManager } from '@/llm/LangChainManager.js';
 
 // Route imports
-import { healthRoutes } from '@/api/routes/health.routes.js';
+import {
+  healthRoutes,
+  initializeHealthRoutes,
+} from '@/api/routes/health.routes.js';
 import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
 import { queryRouter, initializeQueryRoutes } from '@/routes/query.js';
 
@@ -95,6 +98,7 @@ class SlackKnowledgeAgentServer {
     // Initialize service routes
     initializeSlackRoutes(this.slackService);
     initializeQueryRoutes(this.llmManager);
+    initializeHealthRoutes(this.slackService, this.llmManager);
 
     // Health check routes
     this.app.use('/api/health', healthRoutes);
