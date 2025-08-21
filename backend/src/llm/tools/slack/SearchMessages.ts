@@ -45,7 +45,7 @@ export function createSearchMessagesTool(
     description:
       'Search for messages across Slack channels. Use this to find information mentioned in conversations.',
     schema: searchMessagesSchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Searching messages', {
           query: args.query.substring(0, 50) + '...',
@@ -70,28 +70,32 @@ export function createSearchMessagesTool(
 
         const result = await slackService.searchMessages(searchParams);
 
-        const response = {
-          success: true,
-          messages: result.messages.map(msg => ({
-            channel: msg.channel,
-            user: msg.user,
-            text: msg.text,
-            timestamp: msg.ts,
-            thread_ts: msg.thread_ts,
-          })),
-          metadata: {
-            ...result.metadata,
-            search_query: args.query,
-            channels_searched: args.channels,
-          },
-        };
-
         logger.info('Message search completed', {
           messageCount: result.messages.length,
           query: args.query.substring(0, 50) + '...',
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        if (result.messages.length === 0) {
+          return `No messages found matching "${args.query}" in the specified channels.`;
+        }
+
+        // Format messages as readable text
+        const formattedMessages = result.messages
+          .slice(0, 10) // Limit to first 10 for readability
+          .map((msg, index) => {
+            const userDisplay = msg.user || 'Unknown';
+            const timeDisplay = new Date(
+              parseFloat(msg.ts) * 1000
+            ).toLocaleString();
+            return `${index + 1}. [${timeDisplay}] ${userDisplay}: ${msg.text}`;
+          })
+          .join('\n\n');
+
+        const totalCount = result.messages.length;
+        const showingCount = Math.min(10, totalCount);
+
+        return `Found ${totalCount} messages matching "${args.query}"${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n\n${formattedMessages}`;
       } catch (error) {
         const errorMessage = `Error searching messages: ${(error as Error).message}`;
         logger.error('Message search failed', error as Error, {
@@ -99,19 +103,7 @@ export function createSearchMessagesTool(
           channels: args.channels,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            messages: [],
-            metadata: {
-              search_query: args.query,
-              channels_searched: args.channels,
-            },
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });

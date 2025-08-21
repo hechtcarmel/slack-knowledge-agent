@@ -34,7 +34,7 @@ export function createListFilesTool(
     description:
       'List files shared in Slack channels. Use this to find documents, images, or other files mentioned in conversations.',
     schema: listFilesSchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Listing files', {
           channels: args.channels,
@@ -80,7 +80,24 @@ export function createListFilesTool(
           file_types: args.file_types,
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        if (result.files.length === 0) {
+          return 'No files found in the specified channels.';
+        }
+
+        // Format files as readable text
+        const formattedFiles = result.files
+          .slice(0, 10) // Limit to first 10 for readability
+          .map((file, index) => {
+            const sizeKB = Math.round(file.size / 1024);
+            return `${index + 1}. ${file.name} (${file.filetype}, ${sizeKB}KB) - ID: ${file.id}`;
+          })
+          .join('\n');
+
+        const totalCount = result.files.length;
+        const showingCount = Math.min(10, totalCount);
+
+        return `Found ${totalCount} files${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n${formattedFiles}`;
       } catch (error) {
         const errorMessage = `Failed to list files: ${(error as Error).message}`;
         logger.error('File listing failed', error as Error, {
@@ -88,20 +105,7 @@ export function createListFilesTool(
           file_types: args.file_types,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            files: [],
-            metadata: {
-              channels_searched: args.channels,
-              file_types_filter: args.file_types,
-              limit_requested: args.limit,
-            },
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });

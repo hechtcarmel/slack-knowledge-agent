@@ -18,6 +18,10 @@ export class SlackOpenAILLM extends ChatOpenAI {
       temperature: options.temperature || 0.1,
       maxTokens: options.maxTokens || 1000,
       streaming: true, // Enable streaming by default
+      // Enable model kwargs for tool calling
+      modelKwargs: {
+        response_format: undefined, // Allow normal responses
+      },
     });
 
     this.logger = this.logger.child({

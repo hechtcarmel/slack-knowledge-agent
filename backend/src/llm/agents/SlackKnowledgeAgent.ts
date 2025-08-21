@@ -1,12 +1,14 @@
-import { createReactAgent } from 'langchain/agents';
+import { createToolCallingAgent } from 'langchain/agents';
 import { AgentExecutor } from 'langchain/agents';
 
-import { ChatPromptTemplate } from '@langchain/core/prompts';
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from '@langchain/core/prompts';
 
-import { BaseLanguageModel } from '@langchain/core/language_models/base';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Logger } from '@/utils/logger.js';
 import { SlackConversationMemory } from '../memory/SlackMemory.js';
-import { REACT_PROMPT_TEMPLATE } from '../prompts/systemPrompts.js';
 
 export interface AgentConfig {
   maxIterations?: number;
@@ -28,7 +30,7 @@ export class SlackKnowledgeAgent {
   private memory?: SlackConversationMemory;
 
   constructor(
-    private model: BaseLanguageModel,
+    private model: BaseChatModel,
     private tools: any[],
     private config: AgentConfig = {}
   ) {
@@ -43,11 +45,37 @@ export class SlackKnowledgeAgent {
         hasMemory: !!this.memory,
       });
 
-      // Create the ReAct prompt template
-      const prompt = ChatPromptTemplate.fromTemplate(REACT_PROMPT_TEMPLATE);
+      // Create Tool Calling prompt template
+      const systemMessage = `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
 
-      // Create ReAct agent
-      const agent = await createReactAgent({
+Available channels to search: {channelNames}
+
+You have access to the following tools:
+- get_channel_history: Get recent messages from a specific Slack channel
+- get_channel_info: Get information about a Slack channel
+- search_messages: Search for messages across Slack channels
+- get_thread: Get all messages in a specific thread
+- list_files: List files shared in Slack channels
+- get_file_content: Get the content of a text file from Slack
+
+When using tools that require a channel_id, use the actual channel ID provided in parentheses (like {channelIds}), not the channel name.
+
+Always use tools to gather information before responding. Be specific about which channels you're searching. If you find relevant messages, quote them with context (user and timestamp).`;
+
+      const messagesList: any[] = [['system', systemMessage]];
+
+      // Only add chat_history placeholder if memory is enabled
+      if (this.memory) {
+        messagesList.push(new MessagesPlaceholder('chat_history'));
+      }
+
+      messagesList.push(['human', '{input}']);
+      messagesList.push(new MessagesPlaceholder('agent_scratchpad'));
+
+      const prompt = ChatPromptTemplate.fromMessages(messagesList);
+
+      // Create Tool Calling agent (newer and more compatible)
+      const agent = await createToolCallingAgent({
         llm: this.model,
         tools: this.tools,
         prompt,
@@ -58,17 +86,21 @@ export class SlackKnowledgeAgent {
         agent,
         tools: this.tools,
         verbose: this.config.verbose ?? process.env.NODE_ENV === 'development',
-        maxIterations: this.config.maxIterations ?? 10,
+        maxIterations: this.config.maxIterations ?? 15,
         returnIntermediateSteps: this.config.returnIntermediateSteps ?? true,
         handleParsingErrors: this.config.handleParsingErrors ?? true,
         memory: this.memory,
       });
 
-      this.logger.info('SlackKnowledgeAgent initialized successfully', {
-        toolCount: this.tools.length,
-        maxIterations: this.config.maxIterations ?? 10,
-        hasMemory: !!this.memory,
-      });
+      this.logger.info(
+        'SlackKnowledgeAgent (Tool Calling) initialized successfully',
+        {
+          toolCount: this.tools.length,
+          maxIterations: this.config.maxIterations ?? 15,
+          hasMemory: !!this.memory,
+          agentType: 'tool-calling',
+        }
+      );
     } catch (error) {
       this.logger.error(
         'Failed to initialize SlackKnowledgeAgent',
@@ -87,10 +119,11 @@ export class SlackKnowledgeAgent {
     }
 
     try {
-      this.logger.info('Processing query with ReAct agent', {
+      this.logger.info('Processing query with Tool Calling agent', {
         query: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
         context: Object.keys(context),
         hasMemory: !!this.memory,
+        agentType: 'tool-calling',
       });
 
       const startTime = Date.now();
@@ -132,7 +165,7 @@ export class SlackKnowledgeAgent {
     }
 
     try {
-      this.logger.info('Starting streaming query with ReAct agent', {
+      this.logger.info('Starting streaming query with Tool Calling agent', {
         query: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
         context: Object.keys(context),
       });
@@ -187,7 +220,7 @@ export class SlackKnowledgeAgent {
   } {
     return {
       toolCount: this.tools.length,
-      maxIterations: this.config.maxIterations ?? 10,
+      maxIterations: this.config.maxIterations ?? 15,
       hasMemory: !!this.memory,
       isInitialized: !!this.agent,
     };

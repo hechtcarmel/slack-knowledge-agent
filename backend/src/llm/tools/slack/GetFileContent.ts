@@ -17,7 +17,7 @@ export function createGetFileContentTool(
     description:
       'Get the content of a text file from Slack. Use this to read documents, code files, or other text-based files.',
     schema: getFileContentSchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Getting file content', {
           file_id: args.file_id,
@@ -25,39 +25,20 @@ export function createGetFileContentTool(
 
         const content = await slackService.getFileContent(args.file_id);
 
-        const response = {
-          success: true,
-          file: {
-            id: args.file_id,
-            content: content,
-            content_length: content.length,
-          },
-        };
-
         logger.info('File content retrieved successfully', {
           file_id: args.file_id,
           content_length: content.length,
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        return `File content for ${args.file_id}:\n\n${content}`;
       } catch (error) {
         const errorMessage = `Failed to get file content: ${(error as Error).message}`;
         logger.error('File content retrieval failed', error as Error, {
           file_id: args.file_id,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            file: {
-              id: args.file_id,
-              content: null,
-            },
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });

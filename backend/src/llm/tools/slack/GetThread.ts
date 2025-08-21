@@ -20,7 +20,7 @@ export function createGetThreadTool(
     description:
       'Get all messages in a specific thread. Use this when you need to see the full context of a threaded conversation.',
     schema: getThreadSchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Getting thread messages', {
           channel_id: args.channel_id,
@@ -35,16 +35,7 @@ export function createGetThreadTool(
         if (!channel) {
           const errorMessage = `Channel not found: ${args.channel_id}`;
           logger.warn(errorMessage);
-
-          return JSON.stringify(
-            {
-              success: false,
-              error: errorMessage,
-              thread: null,
-            },
-            null,
-            2
-          );
+          return errorMessage;
         }
 
         // Use SlackClient directly for thread retrieval
@@ -52,29 +43,30 @@ export function createGetThreadTool(
           slackService as any
         ).client.getThreadReplies(channel.id, args.thread_ts);
 
-        const response = {
-          success: true,
-          thread: {
-            channel: threadMessages.channel,
-            thread_ts: threadMessages.thread_ts,
-            message_count: threadMessages.messages.length,
-            messages: threadMessages.messages.map((msg: any) => ({
-              user: msg.user,
-              text: msg.text,
-              timestamp: msg.ts,
-              thread_ts: msg.thread_ts,
-              is_parent: msg.ts === args.thread_ts,
-            })),
-          },
-        };
-
         logger.info('Thread retrieved successfully', {
           channel: args.channel_id,
           thread_ts: args.thread_ts,
           message_count: threadMessages.messages.length,
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        if (threadMessages.messages.length === 0) {
+          return `No messages found in thread ${args.thread_ts}.`;
+        }
+
+        // Format thread messages as readable text
+        const formattedMessages = threadMessages.messages
+          .map((msg: any, index: number) => {
+            const userDisplay = msg.user || 'Unknown';
+            const timeDisplay = new Date(
+              parseFloat(msg.ts) * 1000
+            ).toLocaleString();
+            const prefix = index === 0 ? 'Original' : `Reply ${index}`;
+            return `${prefix} [${timeDisplay}] ${userDisplay}: ${msg.text}`;
+          })
+          .join('\n\n');
+
+        return `Thread in #${channel.name} with ${threadMessages.messages.length} messages:\n\n${formattedMessages}`;
       } catch (error) {
         const errorMessage = `Failed to get thread: ${(error as Error).message}`;
         logger.error('Thread retrieval failed', error as Error, {
@@ -82,15 +74,7 @@ export function createGetThreadTool(
           thread_ts: args.thread_ts,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            thread: null,
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });

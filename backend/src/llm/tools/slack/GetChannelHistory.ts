@@ -30,7 +30,7 @@ export function createGetChannelHistoryTool(
     description:
       'Get recent messages from a specific Slack channel. Use this to understand recent conversations or context.',
     schema: getChannelHistorySchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Getting channel history', {
           channel_id: args.channel_id,
@@ -43,33 +43,31 @@ export function createGetChannelHistoryTool(
           includeThreads: args.include_threads,
         });
 
-        const response = {
-          success: true,
-          channel: args.channel_id,
-          messages: result.messages.map(msg => ({
-            channel: msg.channel,
-            user: msg.user,
-            text: msg.text,
-            timestamp: msg.ts,
-            thread_ts: msg.thread_ts,
-            has_thread: !!msg.thread_ts && msg.thread_ts !== msg.ts,
-          })),
-          metadata: {
-            ...result.metadata,
-            channel_requested: args.channel_id,
-            limit_requested: args.limit,
-            include_threads: args.include_threads,
-            message_count: result.messages.length,
-          },
-        };
-
         logger.info('Channel history retrieved successfully', {
           channel: args.channel_id,
           message_count: result.messages.length,
           limit: args.limit,
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        if (result.messages.length === 0) {
+          return `No messages found in channel ${result.metadata.channelName || args.channel_id}.`;
+        }
+
+        // Format messages as readable text
+        const formattedMessages = result.messages
+          .map((msg, index) => {
+            const messageNum = result.messages.length - index; // Reverse numbering so latest is #1
+            const userDisplay = msg.user || 'Unknown';
+            const timeDisplay = new Date(
+              parseFloat(msg.ts) * 1000
+            ).toLocaleString();
+            return `Message #${messageNum} (${timeDisplay}) from ${userDisplay}: ${msg.text}`;
+          })
+          .reverse() // Show most recent first
+          .join('\n\n');
+
+        return `Found ${result.messages.length} messages in channel ${result.metadata.channelName || args.channel_id}:\n\n${formattedMessages}`;
       } catch (error) {
         const errorMessage = `Failed to get channel history: ${(error as Error).message}`;
         logger.error('Channel history retrieval failed', error as Error, {
@@ -77,20 +75,7 @@ export function createGetChannelHistoryTool(
           limit: args.limit,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            messages: [],
-            metadata: {
-              channel_requested: args.channel_id,
-              limit_requested: args.limit,
-              include_threads: args.include_threads,
-            },
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });

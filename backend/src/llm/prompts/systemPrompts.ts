@@ -38,9 +38,15 @@ export const SLACK_KNOWLEDGE_PROMPT = ChatPromptTemplate.fromMessages([
 ]);
 
 // ReAct-specific prompt template
-export const REACT_PROMPT_TEMPLATE = `Answer the following questions as best you can. You have access to the following tools:
+export const REACT_PROMPT_TEMPLATE = `You are a Slack Knowledge Agent. Answer the following questions as best you can using information from the Slack workspace.
+
+Available channels to search: {channelNames}
+
+You have access to the following tools:
 
 {tools}
+
+When using tools that require a channel_id, use the actual channel ID (like C09B8CNEQNR), not the channel name.
 
 Use the following format:
 

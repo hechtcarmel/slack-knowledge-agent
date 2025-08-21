@@ -48,8 +48,36 @@ export class SlackService {
   }
 
   async getChannelById(channelId: string): Promise<Channel | null> {
+    // First check the cache
     const channels = await this.getChannels();
-    return channels.find(ch => ch.id === channelId) || null;
+    const cachedChannel = channels.find(ch => ch.id === channelId);
+    if (cachedChannel) {
+      return cachedChannel;
+    }
+
+    // If not in cache, try to fetch directly from Slack
+    try {
+      this.logger.debug('Channel not in cache, fetching directly from Slack', {
+        channelId,
+      });
+      const channel = await this.client.getChannelInfo(channelId);
+      if (channel) {
+        // Add to cache for future use
+        this.channelsCache.set(channel.id, channel);
+        this.logger.info('Channel fetched and cached', {
+          channelId: channel.id,
+          channelName: channel.name,
+        });
+        return channel;
+      }
+    } catch (error) {
+      this.logger.debug('Failed to fetch channel directly', {
+        channelId,
+        error: (error as Error).message,
+      });
+    }
+
+    return null;
   }
 
   async getChannelByName(channelName: string): Promise<Channel | null> {

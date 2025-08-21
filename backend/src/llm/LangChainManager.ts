@@ -202,7 +202,7 @@ export class LangChainManager {
         }
 
         const tempAgent = new SlackKnowledgeAgent(tempModel, this.tools, {
-          maxIterations: 10,
+          maxIterations: 15,
           verbose: process.env.NODE_ENV === 'development',
           returnIntermediateSteps: true,
           handleParsingErrors: true,
@@ -316,7 +316,7 @@ export class LangChainManager {
         }
 
         const tempAgent = new SlackKnowledgeAgent(tempModel, this.tools, {
-          maxIterations: 10,
+          maxIterations: 15,
           verbose: process.env.NODE_ENV === 'development',
           returnIntermediateSteps: true,
           handleParsingErrors: true,
@@ -488,7 +488,7 @@ export class LangChainManager {
   private async initializeAgents(): Promise<void> {
     for (const [provider, model] of this.models) {
       const agent = new SlackKnowledgeAgent(model, this.tools, {
-        maxIterations: 10,
+        maxIterations: 15,
         verbose: process.env.NODE_ENV === 'development',
         returnIntermediateSteps: true,
         handleParsingErrors: true,
@@ -503,8 +503,14 @@ export class LangChainManager {
   }
 
   private buildAgentContext(context: LLMContext): Record<string, any> {
+    // Build channel info string with both IDs and names
+    const channelInfo = context.metadata.channels
+      .map(ch => `${ch.name} (${ch.id})`)
+      .join(', ');
+
     return {
-      channelNames: context.metadata.channels.map(ch => ch.name).join(', '),
+      channelNames: channelInfo,
+      channelIds: context.channelIds.join(', '),
       totalMessages: context.metadata.total_messages,
       // Pass tool names for the ReAct prompt template
       tool_names: this.tools.map(tool => tool.name).join(', '),

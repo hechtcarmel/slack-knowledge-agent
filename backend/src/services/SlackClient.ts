@@ -24,12 +24,14 @@ export class SlackClient {
       this.userClient = new WebClient(userToken);
     }
     // Log masked token for debugging
-    const maskedBotToken = botToken
-      ? `${botToken.substring(0, 10)}...${botToken.substring(botToken.length - 4)}`
-      : 'NO_TOKEN';
-    const maskedUserToken = userToken
-      ? `${userToken.substring(0, 10)}...${userToken.substring(userToken.length - 4)}`
-      : 'NO_USER_TOKEN';
+    const maskedBotToken =
+      botToken && typeof botToken === 'string'
+        ? `${botToken.substring(0, 10)}...${botToken.substring(botToken.length - 4)}`
+        : 'NO_TOKEN';
+    const maskedUserToken =
+      userToken && typeof userToken === 'string'
+        ? `${userToken.substring(0, 10)}...${userToken.substring(userToken.length - 4)}`
+        : 'NO_USER_TOKEN';
     this.logger.info('SlackClient initialized', {
       botTokenPreview: maskedBotToken,
       userTokenPreview: maskedUserToken,
@@ -138,6 +140,41 @@ export class SlackClient {
         'CHANNELS_FETCH_FAILED',
         error
       );
+    }
+  }
+
+  async getChannelInfo(channelId: string): Promise<Channel | null> {
+    try {
+      return await this.retryManager.executeWithRetry(async () => {
+        this.logger.debug('Fetching channel info', { channelId });
+
+        const result = await this.client.conversations.info({
+          channel: channelId,
+        });
+
+        if (!result.ok) {
+          this.logger.debug('Failed to fetch channel info', {
+            channelId,
+            error: result.error,
+          });
+          return null;
+        }
+
+        const channel = result.channel as any;
+        return {
+          id: channel.id,
+          name: channel.name,
+          purpose: channel.purpose,
+          topic: channel.topic,
+          num_members: channel.num_members,
+        };
+      });
+    } catch (error) {
+      this.logger.debug('Error fetching channel info', {
+        channelId,
+        error: (error as Error).message,
+      });
+      return null;
     }
   }
 

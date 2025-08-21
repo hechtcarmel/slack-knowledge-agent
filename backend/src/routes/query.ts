@@ -4,6 +4,7 @@ import { LangChainManager, type LLMContext } from '@/llm/LangChainManager.js';
 import { Logger } from '@/utils/logger.js';
 import { validateRequest } from '@/middleware/validation.js';
 import { QueryRequestSchema } from '@/api/validators/schemas.js';
+import { SlackService } from '@/services/SlackService.js';
 
 const router: ExpressRouter = Router();
 const logger = Logger.create('QueryRoutes');
@@ -25,11 +26,16 @@ const HealthSchema = z.object({
   detailed: z.boolean().default(false),
 });
 
-// Initialize LangChainManager (will be injected by server)
+// Initialize LangChainManager and SlackService (will be injected by server)
 let llmManager: LangChainManager;
+let slackService: SlackService;
 
-export function initializeQueryRoutes(manager: LangChainManager) {
+export function initializeQueryRoutes(
+  manager: LangChainManager,
+  slack: SlackService
+) {
   llmManager = manager;
+  slackService = slack;
 }
 
 // POST /query - Process a knowledge query
@@ -46,15 +52,24 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       stream: llmOptions.stream,
     });
 
-    // Build LLM context - for now, we'll create a basic context
-    // In a full implementation, this would gather actual Slack data
+    // Build LLM context with proper channel information
+    const channelInfo = await Promise.all(
+      channels.map(async (channelId: string) => {
+        const channel = await slackService.getChannelById(channelId);
+        return {
+          id: channelId,
+          name: channel?.name || channelId, // Fallback to ID if channel not found
+        };
+      })
+    );
+
     const llmContext: LLMContext = {
       query: query,
       channelIds: channels,
       messages: [], // Will be populated by tools
       metadata: {
         total_messages: 0,
-        channels: channels.map((ch: string) => ({ id: ch, name: ch })),
+        channels: channelInfo,
         search_time_ms: 0,
         token_count: 0,
       },

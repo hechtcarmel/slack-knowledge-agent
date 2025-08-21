@@ -102,7 +102,7 @@ class SlackKnowledgeAgentServer {
   private async setupRoutes(): Promise<void> {
     // Initialize service routes
     initializeSlackRoutes(this.slackService);
-    initializeQueryRoutes(this.llmManager);
+    initializeQueryRoutes(this.llmManager, this.slackService);
     initializeHealthRoutes(this.slackService, this.llmManager);
 
     // Health check routes

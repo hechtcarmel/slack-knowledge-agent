@@ -17,7 +17,7 @@ export function createGetChannelInfoTool(
     description:
       'Get information about a Slack channel including its purpose, topic, and member count.',
     schema: getChannelInfoSchema,
-    func: async args => {
+    func: async (args: any) => {
       try {
         logger.info('Getting channel info', {
           channel_id: args.channel_id,
@@ -30,33 +30,8 @@ export function createGetChannelInfoTool(
         if (!channel) {
           const errorMessage = `Channel not found: ${args.channel_id}`;
           logger.warn(errorMessage);
-
-          return JSON.stringify(
-            {
-              success: false,
-              error: errorMessage,
-              channel: null,
-            },
-            null,
-            2
-          );
+          return errorMessage;
         }
-
-        const response = {
-          success: true,
-          channel: {
-            id: channel.id,
-            name: channel.name,
-            purpose: channel.purpose?.value || null,
-            topic: channel.topic?.value || null,
-            member_count: channel.num_members || 0,
-            is_private: (channel as any).is_private || false,
-            is_archived: (channel as any).is_archived || false,
-            created: (channel as any).created
-              ? new Date((channel as any).created * 1000).toISOString()
-              : null,
-          },
-        };
 
         logger.info('Channel info retrieved successfully', {
           channel_id: args.channel_id,
@@ -64,22 +39,31 @@ export function createGetChannelInfoTool(
           member_count: channel.num_members,
         });
 
-        return JSON.stringify(response, null, 2);
+        // Return plain text for ReAct agent compatibility
+        const info = [];
+        info.push(`Channel: #${channel.name} (ID: ${channel.id})`);
+        if (channel.purpose?.value) {
+          info.push(`Purpose: ${channel.purpose.value}`);
+        }
+        if (channel.topic?.value) {
+          info.push(`Topic: ${channel.topic.value}`);
+        }
+        info.push(`Members: ${channel.num_members || 0}`);
+        if ((channel as any).is_private) {
+          info.push(`Type: Private channel`);
+        }
+        if ((channel as any).is_archived) {
+          info.push(`Status: Archived`);
+        }
+
+        return info.join('\n');
       } catch (error) {
         const errorMessage = `Failed to get channel info: ${(error as Error).message}`;
         logger.error('Channel info retrieval failed', error as Error, {
           channel_id: args.channel_id,
         });
 
-        return JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            channel: null,
-          },
-          null,
-          2
-        );
+        return errorMessage;
       }
     },
   });
