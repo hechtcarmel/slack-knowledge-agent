@@ -72,7 +72,7 @@ export class LangChainManager {
 
   constructor(
     private openaiApiKey: string,
-    private anthropicApiKey: string,
+    private anthropicApiKey: string | undefined,
     private slackService: SlackService
   ) {
     this.initializeModels();
@@ -313,11 +313,14 @@ export class LangChainManager {
   }
 
   private initializeModels(): void {
-    if (this.openaiApiKey) {
+    if (this.openaiApiKey && this.openaiApiKey.trim().startsWith('sk-')) {
       this.models.set('openai', new SlackOpenAILLM(this.openaiApiKey));
     }
 
-    if (this.anthropicApiKey) {
+    if (
+      this.anthropicApiKey &&
+      this.anthropicApiKey.trim().startsWith('sk-ant-')
+    ) {
       this.models.set('anthropic', new SlackAnthropicLLM(this.anthropicApiKey));
     }
 
@@ -410,19 +413,25 @@ export class LangChainManager {
 
     for (const [provider, model] of this.models) {
       try {
+        this.logger.info(`Validating provider: ${provider}`);
         const isValid = await model.validateConfig();
         if (isValid) {
           validProviders.push(provider as LLMProvider);
           this.logger.info(`Provider ${provider} validated successfully`);
+        } else {
+          this.logger.warn(`Provider ${provider} validation returned false`);
         }
       } catch (error) {
-        this.logger.warn(
+        this.logger.error(
           `Provider ${provider} validation failed`,
           error as Error
         );
       }
     }
 
+    this.logger.info(
+      `Validation completed. Valid providers: ${validProviders.join(', ')}`
+    );
     return validProviders;
   }
 }
