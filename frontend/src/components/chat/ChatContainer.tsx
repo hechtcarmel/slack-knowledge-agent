@@ -11,7 +11,8 @@ import {
   Settings, 
   Plus,
   Loader2,
-  Sparkles
+  Sparkles,
+  Bot
 } from 'lucide-react';
 
 
@@ -22,6 +23,7 @@ interface ChatContainerProps {
   onShowSettings?: () => void;
   isLoading?: boolean;
   streamingMessage?: string;
+  isAiTyping?: boolean;
   error?: string | null;
   selectedChannels: string[];
 }
@@ -33,6 +35,7 @@ export function ChatContainer({
   onShowSettings,
   isLoading = false,
   streamingMessage = '',
+  isAiTyping = false,
   error,
   selectedChannels
 }: ChatContainerProps) {
@@ -135,12 +138,31 @@ export function ChatContainer({
                 />
               ))}
               
-              {/* Loading indicator for new messages */}
-              {isLoading && !streamingMessage && (
+              {/* AI Typing indicator */}
+              {isAiTyping && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-shrink-0 w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-secondary-foreground" />
+                    </div>
+                    <div className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading indicator for other operations */}
+              {isLoading && !streamingMessage && !isAiTyping && (
                 <div className="flex justify-start">
                   <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-4 py-3">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Thinking...</span>
+                    <span className="text-sm text-muted-foreground">Loading...</span>
                   </div>
                 </div>
               )}
@@ -188,12 +210,14 @@ export function ChatContainer({
       <div className="flex-shrink-0">
         <ChatInput
           onSendMessage={onSendMessage}
-          isLoading={isLoading}
-          disabled={isLoading || selectedChannels.length === 0}
+          isLoading={isLoading || isAiTyping}
+          disabled={isLoading || isAiTyping || selectedChannels.length === 0}
           placeholder={
             selectedChannels.length === 0 
               ? "Select channels to start chatting..." 
-              : "Ask me anything about your Slack workspace..."
+              : isAiTyping
+                ? "AI is responding..."
+                : "Ask me anything about your Slack workspace..."
           }
         />
       </div>

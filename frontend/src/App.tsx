@@ -20,6 +20,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // API hooks
@@ -91,27 +92,65 @@ function App() {
     setError(null);
 
     try {
-      // Use the regular sendMessage mutation instead of streaming for now
+      let conversationToUse = currentConversation;
+      let conversationIdToUse = currentConversationId;
+
+      // Create new conversation if needed
+      if (!conversationIdToUse) {
+        const newConversation = await createConversationMutation.mutateAsync({
+          channels: selectedChannels,
+          options: defaultOptions,
+        });
+        conversationToUse = newConversation;
+        conversationIdToUse = newConversation.id;
+        setCurrentConversationId(newConversation.id);
+      }
+
+      // Add user message immediately to UI
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Update conversation with user message immediately
+      if (conversationToUse) {
+        const updatedConversation = {
+          ...conversationToUse,
+          messages: [...conversationToUse.messages, userMessage],
+          title: conversationToUse.title || (message.length > 50 ? message.substring(0, 50) + '...' : message),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Update React Query cache immediately to show user message
+        queryClient.setQueryData(['chat', 'conversation', conversationIdToUse], updatedConversation);
+        ConversationStorage.saveConversation(updatedConversation);
+      }
+
+      // Show typing indicator while AI responds
+      setIsAiTyping(true);
+
+      // Now send the message to backend (this will add the AI response)
       const response = await sendMessageMutation.mutateAsync({
-        conversationId: currentConversationId,
+        conversationId: conversationIdToUse,
         message,
         channels: selectedChannels,
-        options: currentConversationId ? currentConversation?.options || defaultOptions : defaultOptions,
+        options: conversationToUse?.options || defaultOptions,
         stream: false,
       });
 
-      // If no current conversation, set the new one
-      if (!currentConversationId) {
-        setCurrentConversationId(response.conversationId);
-      }
+      // Hide typing indicator
+      setIsAiTyping(false);
 
-      // The mutation's onSuccess handler will update the cache and localStorage
-      // Force a refetch to ensure UI is updated
+      // The mutation's onSuccess handler will update with the AI response
+      // Force a refetch to ensure the AI message appears
       await currentConversationQuery.refetch();
       await conversationsQuery.refetch();
     } catch (error) {
       console.error('Failed to send message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
+      setIsAiTyping(false);
     }
   };
 
@@ -199,6 +238,7 @@ function App() {
           onNewConversation={handleNewConversation}
           isLoading={isLoading}
           streamingMessage={streamingMessage}
+          isAiTyping={isAiTyping}
           error={combinedError}
           selectedChannels={selectedChannels}
         />
