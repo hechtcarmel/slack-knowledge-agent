@@ -11,15 +11,13 @@ import {
   MessageSquareText, 
   Copy, 
   CheckCheck, 
-  Clock, 
   Hash, 
-  Zap, 
   ExternalLink,
   ChevronDown,
   ChevronRight,
   Activity
 } from 'lucide-react';
-import { formatDuration, formatTimestamp, cn } from '@/lib/utils';
+import { formatTimestamp, cn } from '@/lib/utils';
 
 interface ResponseDisplayProps {
   response: QueryResponse;
@@ -29,7 +27,6 @@ interface ResponseDisplayProps {
 export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [showSources, setShowSources] = useState(false);
-  const [showMetadata, setShowMetadata] = useState(false);
   const [showAdvancedMetadata, setShowAdvancedMetadata] = useState(false);
 
   const handleCopy = async () => {
@@ -125,104 +122,7 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
         </CardContent>
       </Card>
 
-      {/* Metadata Card */}
-      <Card>
-        <CardHeader>
-          <button
-            onClick={() => setShowMetadata(!showMetadata)}
-            className="flex items-center justify-between w-full text-left hover:opacity-80"
-          >
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Query Metadata
-            </CardTitle>
-            {showMetadata ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
-        </CardHeader>
-        {showMetadata && (
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Processing Time</p>
-                  <p className="text-muted-foreground">
-                    {formatDuration(response.metadata.processingTime)}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Channels Searched</p>
-                  <p className="text-muted-foreground">
-                    {response.metadata.channels.length}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Messages Found</p>
-                  <p className="text-muted-foreground">
-                    {response.metadata.messagesFound}
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">LLM Provider</p>
-                  <p className="text-muted-foreground">
-                    {response.metadata.llmProvider}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {response.metadata.tokenUsage && (
-              <div className="mt-4 pt-4 border-t">
-                <h4 className="font-medium text-sm mb-2">Token Usage</h4>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Prompt</p>
-                    <p className="font-mono">{response.metadata.tokenUsage.prompt.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Completion</p>
-                    <p className="font-mono">{response.metadata.tokenUsage.completion.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Total</p>
-                    <p className="font-mono font-medium">{response.metadata.tokenUsage.total.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {response.metadata.channels.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <h4 className="font-medium text-sm mb-2">Searched Channels</h4>
-                <div className="flex flex-wrap gap-2">
-                  {response.metadata.channels.map((channel) => (
-                    <Badge key={channel} variant="secondary" className="flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      {channel}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        )}
-      </Card>
 
       {/* Advanced Metadata Card */}
       {(response.metadata.intermediateSteps && response.metadata.intermediateSteps.length > 0) || response.metadata.executionTrace ? (
