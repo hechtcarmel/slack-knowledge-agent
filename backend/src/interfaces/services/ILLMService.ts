@@ -119,22 +119,6 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    * Clear conversation memory
    */
   clearMemory(): Promise<void>;
-
-  /**
-   * Process a query with conversation context
-   */
-  processConversationQuery(
-    context: any, // Use any to avoid circular imports
-    config?: Partial<LLMConfig>
-  ): Promise<QueryResult>;
-
-  /**
-   * Stream a query response with conversation context
-   */
-  streamConversationQuery(
-    context: any, // Use any to avoid circular imports
-    config?: Partial<LLMConfig>
-  ): AsyncIterable<StreamChunk>;
 }
 
 /**

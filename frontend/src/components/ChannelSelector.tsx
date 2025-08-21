@@ -12,11 +12,24 @@ import { Channel } from '@/types/api';
 interface ChannelSelectorProps {
   selectedChannels: string[];
   onSelectionChange: (channels: string[]) => void;
+  hideHeader?: boolean;
+  channels?: Channel[];
+  isLoading?: boolean;
 }
 
-export function ChannelSelector({ selectedChannels, onSelectionChange }: ChannelSelectorProps) {
+export function ChannelSelector({ 
+  selectedChannels, 
+  onSelectionChange, 
+  hideHeader = false,
+  channels: providedChannels,
+  isLoading: providedLoading
+}: ChannelSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: channels, isLoading, error } = useChannelsQuery();
+  const { data: fetchedChannels, isLoading: fetchLoading, error } = useChannelsQuery();
+  
+  // Use provided channels/loading or fallback to fetched data
+  const channels = providedChannels || fetchedChannels;
+  const isLoading = providedLoading ?? fetchLoading;
 
   const filteredChannels = channels?.filter(channel =>
     channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -41,7 +54,111 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
     }
   };
 
+  // Content component
+  const SelectorContent = () => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search channels..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Select All Button */}
+      {filteredChannels.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">
+              {selectedChannels.length} of {filteredChannels.length} selected
+            </Badge>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+          >
+            {selectedChannels.length === filteredChannels.length ? 'Deselect All' : 'Select All'}
+          </Button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg">
+              <Skeleton className="h-4 w-4 rounded" />
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Channel List */}
+      {!isLoading && (
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+          {filteredChannels.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchQuery ? 'No channels match your search' : 'No channels available'}
+            </div>
+          ) : (
+            filteredChannels.map((channel) => (
+              <div
+                key={channel.id}
+                className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-accent-foreground/20 transition-colors cursor-pointer"
+                onClick={() => handleChannelToggle(channel.id)}
+              >
+                <Checkbox
+                  checked={selectedChannels.includes(channel.id)}
+                  onCheckedChange={() => handleChannelToggle(channel.id)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Hash className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="font-medium text-sm">{channel.name}</span>
+                    <Badge variant="outline" className="ml-auto flex-shrink-0">
+                      <Users className="h-3 w-3 mr-1" />
+                      {channel.num_members}
+                    </Badge>
+                  </div>
+                  {(channel.purpose?.value || channel.topic?.value) && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      Purpose: {channel.purpose?.value || channel.topic?.value}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   if (error) {
+    const errorContent = (
+      <div className="flex items-center gap-2 text-destructive">
+        <span>Failed to load channels: {error.message}</span>
+      </div>
+    );
+
+    if (hideHeader) {
+      return errorContent;
+    }
+
     return (
       <Card>
         <CardHeader>
@@ -52,12 +169,15 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
           <CardDescription>Choose which channels to search</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-destructive">
-            <span>Failed to load channels: {error.message}</span>
-          </div>
+          {errorContent}
         </CardContent>
       </Card>
     );
+  }
+
+  // Return content with or without Card wrapper
+  if (hideHeader) {
+    return <SelectorContent />;
   }
 
   return (
@@ -71,122 +191,9 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
           Choose which channels to search for your query
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search channels..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        {/* Select All Button */}
-        {filteredChannels.length > 0 && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {selectedChannels.length} of {filteredChannels.length} selected
-              </Badge>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-            >
-              {selectedChannels.length === filteredChannels.length ? 'Deselect All' : 'Select All'}
-            </Button>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg">
-                <Skeleton className="h-4 w-4 rounded" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Skeleton className="h-4 w-4" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-5 w-12 rounded-full" />
-                  </div>
-                  <Skeleton className="h-3 w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Channel List */}
-        {!isLoading && (
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {filteredChannels.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'No channels match your search' : 'No channels available'}
-              </div>
-            ) : (
-              filteredChannels.map((channel) => (
-                <ChannelCard
-                  key={channel.id}
-                  channel={channel}
-                  isSelected={selectedChannels.includes(channel.id)}
-                  onToggle={() => handleChannelToggle(channel.id)}
-                />
-              ))
-            )}
-          </div>
-        )}
+      <CardContent>
+        <SelectorContent />
       </CardContent>
     </Card>
-  );
-}
-
-interface ChannelCardProps {
-  channel: Channel;
-  isSelected: boolean;
-  onToggle: () => void;
-}
-
-function ChannelCard({ channel, isSelected, onToggle }: ChannelCardProps) {
-  return (
-    <div 
-      className={`
-        flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-colors
-        ${isSelected ? 'border-primary bg-primary-light/20 shadow-md' : 'border-border hover:bg-accent-light/30'}
-      `}
-      onClick={onToggle}
-    >
-      <Checkbox 
-        checked={isSelected} 
-        onChange={onToggle}
-        className="mt-1"
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <span className="font-medium text-sm">{channel.name}</span>
-          {(channel.memberCount !== undefined || channel.num_members !== undefined) && (
-            <Badge variant="outline" className="text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              {channel.memberCount ?? channel.num_members}
-            </Badge>
-          )}
-        </div>
-        {channel.description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {channel.description}
-          </p>
-        )}
-        {channel.purpose?.value && (
-          <p className="text-xs text-muted-foreground mt-1 italic">
-            Purpose: {channel.purpose.value}
-          </p>
-        )}
-      </div>
-    </div>
   );
 }

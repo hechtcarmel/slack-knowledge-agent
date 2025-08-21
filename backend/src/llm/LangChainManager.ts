@@ -599,69 +599,6 @@ export class LangChainManager {
   }
 
   /**
-   * Process a query with conversation context
-   */
-  async processConversationQuery(
-    context: any, // ConversationLLMContext
-    config?: Partial<LLMConfig>
-  ): Promise<QueryResult> {
-    // Convert conversation context to regular LLM context
-    const llmContext: LLMContext = {
-      query: this.buildConversationAwareQuery(context),
-      channelIds: context.channelIds,
-      messages: context.messages,
-      metadata: context.metadata,
-    };
-
-    return this.processQuery(llmContext, config);
-  }
-
-  /**
-   * Stream a query response with conversation context
-   */
-  async *streamConversationQuery(
-    context: any, // ConversationLLMContext
-    config?: Partial<LLMConfig>
-  ): AsyncIterable<StreamChunk> {
-    // Convert conversation context to regular LLM context
-    const llmContext: LLMContext = {
-      query: this.buildConversationAwareQuery(context),
-      channelIds: context.channelIds,
-      messages: context.messages,
-      metadata: context.metadata,
-    };
-
-    yield* this.streamQuery(llmContext, config);
-  }
-
-  /**
-   * Build a conversation-aware query that includes chat history
-   */
-  private buildConversationAwareQuery(context: any): string {
-    if (
-      !context.conversationHistory ||
-      context.conversationHistory.length === 0
-    ) {
-      return context.query;
-    }
-
-    // Build conversation context string from last 5 messages
-    const conversationContext = context.conversationHistory
-      .slice(-5)
-      .map(
-        (msg: any) =>
-          `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
-      )
-      .join('\n\n');
-
-    // Combine conversation history with current query
-    return `Previous conversation context:
-${conversationContext}
-
-Current user question: ${context.query}`;
-  }
-
-  /**
    * Clear conversation memory
    */
   async clearMemory(): Promise<void> {

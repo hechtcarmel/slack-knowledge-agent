@@ -2,25 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Conversation, ChatMessage as ChatMessageType } from '@/types/chat';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertCircle } from 'lucide-react';
 import { 
   MessageSquare, 
-  Hash, 
-  Settings, 
   Plus,
   Loader2,
-  Sparkles,
   Bot
 } from 'lucide-react';
-
 
 interface ChatContainerProps {
   conversation: Conversation | null;
   onSendMessage: (message: string) => void;
   onNewConversation: () => void;
-  onShowSettings?: () => void;
   isLoading?: boolean;
   streamingMessage?: string;
   isAiTyping?: boolean;
@@ -32,7 +27,6 @@ export function ChatContainer({
   conversation, 
   onSendMessage,
   onNewConversation,
-  onShowSettings,
   isLoading = false,
   streamingMessage = '',
   isAiTyping = false,
@@ -47,13 +41,10 @@ export function ChatContainer({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation?.messages, streamingMessage]);
 
-  // Build display messages including streaming message
-  const displayMessages: ChatMessageType[] = [
-    ...(conversation?.messages || [])
-  ];
-
+  const displayMessages = conversation?.messages || [];
+  
   // Add streaming message if present
-  if (streamingMessage && conversation) {
+  if (streamingMessage) {
     const streamingMsg: ChatMessageType = {
       id: streamingMessageId,
       role: 'assistant',
@@ -64,56 +55,36 @@ export function ChatContainer({
   }
 
   const hasMessages = displayMessages.length > 0;
-  // selectedChannels is now passed as a prop
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-card/50 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <h1 className="text-lg font-semibold">
-                  {conversation?.title || 'New Conversation'}
-                </h1>
-              </div>
-              
-
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onNewConversation}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Chat
-              </Button>
-              
-              {onShowSettings && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onShowSettings}
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+      <div className="flex-shrink-0 border-b border-border bg-card p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-semibold">
+              {conversation?.title || 'New Chat'}
+            </h1>
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onNewConversation}
+            disabled={isLoading}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
+          </Button>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-hidden">
+      {/* Chat Messages Area */}
+      <div className="flex-1 flex flex-col min-h-0">
         {hasMessages ? (
-          <ScrollArea className="h-full">
-            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 max-w-4xl mx-auto w-full">
               {displayMessages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -155,55 +126,51 @@ export function ChatContainer({
             </div>
           </ScrollArea>
         ) : (
-          /* Empty State */
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center max-w-md mx-auto space-y-6">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Sparkles className="h-8 w-8 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Ready to help!</h3>
-                <p className="text-muted-foreground text-sm">
-                  Ask me anything about your Slack workspace. I can search through messages, 
-                  files, and threads to help you find what you need.
-                </p>
+                <MessageSquare className="h-8 w-8 text-primary" />
               </div>
               
-              {selectedChannels.length === 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                  <p className="text-amber-800">
-                    💡 <strong>Tip:</strong> Select some channels first to get started!
-                  </p>
-                </div>
-              )}
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Ready to Chat</h3>
+                <p className="text-muted-foreground">
+                  Ask me anything about your selected Slack channels
+                </p>
+              </div>
             </div>
           </div>
         )}
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="flex-shrink-0 border-t border-red-200 bg-red-50 px-4 py-2">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-sm text-red-700">{error}</p>
+        {/* Error Display */}
+        {error && (
+          <div className="flex-shrink-0 p-4 border-t border-border">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm max-w-4xl mx-auto">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <p className="text-destructive">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Input Area */}
+        <div className="flex-shrink-0 p-4 border-t border-border">
+          <div className="max-w-4xl mx-auto w-full">
+            <ChatInput
+              onSendMessage={onSendMessage}
+              isLoading={isLoading || isAiTyping}
+              disabled={isLoading || isAiTyping || selectedChannels.length === 0}
+              placeholder={
+                selectedChannels.length === 0 
+                  ? "Select channels to start chatting..." 
+                  : isAiTyping
+                    ? "AI is responding..."
+                    : "Ask me anything about your Slack workspace..."
+              }
+            />
           </div>
         </div>
-      )}
-
-      {/* Input Area */}
-      <div className="flex-shrink-0">
-        <ChatInput
-          onSendMessage={onSendMessage}
-          isLoading={isLoading || isAiTyping}
-          disabled={isLoading || isAiTyping || selectedChannels.length === 0}
-          placeholder={
-            selectedChannels.length === 0 
-              ? "Select channels to start chatting..." 
-              : isAiTyping
-                ? "AI is responding..."
-                : "Ask me anything about your Slack workspace..."
-          }
-        />
       </div>
     </div>
   );
