@@ -89,10 +89,44 @@ class ApiClient {
   }
 
   async submitQuery(query: QueryRequest): Promise<QueryResponse> {
-    return this.request<QueryResponse>('/query', {
+    const response = await this.request<{
+      status: 'success';
+      data: {
+        answer: string;
+        metadata: {
+          provider: string;
+          model: string;
+          usage: {
+            prompt_tokens: number;
+            completion_tokens: number;
+            total_tokens: number;
+            cost_usd?: number;
+          };
+          tool_calls?: number;
+          response_time_ms: number;
+        };
+      };
+    }>('/query', {
       method: 'POST',
       body: JSON.stringify(query),
     });
+
+    // Transform backend response to frontend expected format
+    return {
+      response: response.data.answer,
+      metadata: {
+        channels: query.channels,
+        messagesFound: response.data.metadata.tool_calls || 0,
+        tokenUsage: {
+          prompt: response.data.metadata.usage.prompt_tokens,
+          completion: response.data.metadata.usage.completion_tokens,
+          total: response.data.metadata.usage.total_tokens,
+        },
+        processingTime: response.data.metadata.response_time_ms,
+        llmProvider: response.data.metadata.provider,
+      },
+      sources: [], // TODO: Add sources when backend provides them
+    };
   }
 
   async getLLMProviders(): Promise<LLMProvider[]> {
