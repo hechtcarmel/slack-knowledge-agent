@@ -14,7 +14,7 @@ import {
 
 // Service imports
 import { SlackService } from '@/services/SlackService.js';
-import { LLMManager } from '@/llm/LLMManager.js';
+import { LangChainManager } from '@/llm/LangChainManager.js';
 
 // Route imports
 import { healthRoutes } from '@/api/routes/health.routes.js';
@@ -27,14 +27,14 @@ class SlackKnowledgeAgentServer {
   private app: express.Application;
   private configManager: ConfigManager;
   private slackService: SlackService;
-  private llmManager: LLMManager;
+  private llmManager: LangChainManager;
   private config = getConfig();
 
   constructor() {
     this.app = express();
     this.configManager = new ConfigManager();
     this.slackService = new SlackService(this.config.SLACK_BOT_TOKEN);
-    this.llmManager = new LLMManager(
+    this.llmManager = new LangChainManager(
       this.config.OPENAI_API_KEY,
       this.config.ANTHROPIC_API_KEY || '',
       this.slackService

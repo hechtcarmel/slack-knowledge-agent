@@ -1,9 +1,8 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { LLMManager } from '@/llm/LLMManager.js';
+import { LangChainManager, type LLMContext } from '@/llm/LangChainManager.js';
 import { Logger } from '@/utils/logger.js';
 import { validateRequest } from '@/middleware/validation.js';
-import { LLMContext } from '@/llm/types.js';
 import { QueryRequestSchema } from '@/api/validators/schemas.js';
 
 const router: ExpressRouter = Router();
@@ -26,10 +25,10 @@ const HealthSchema = z.object({
   detailed: z.boolean().default(false),
 });
 
-// Initialize LLMManager (will be injected by server)
-let llmManager: LLMManager;
+// Initialize LangChainManager (will be injected by server)
+let llmManager: LangChainManager;
 
-export function initializeQueryRoutes(manager: LLMManager) {
+export function initializeQueryRoutes(manager: LangChainManager) {
   llmManager = manager;
 }
 
@@ -38,7 +37,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const { query, channels, context = {}, llmOptions = {} } = req.body;
+    const { query, channels, llmOptions = {} } = req.body;
 
     logger.info('Processing knowledge query', {
       query: query.substring(0, 100) + '...',
