@@ -46,22 +46,16 @@ function App() {
 
   // Restore state from localStorage on mount
   useEffect(() => {
-    const savedConversationId = ConversationStorage.getCurrentConversationId();
+    // Only restore selected channels, not current conversation (always start fresh)
     const savedChannels = ConversationStorage.getSelectedChannels();
-    
-    if (savedConversationId) {
-      setCurrentConversationId(savedConversationId);
-    }
     
     if (savedChannels.length > 0) {
       setSelectedChannels(savedChannels);
     }
+    
+    // Clear any saved current conversation ID to ensure fresh start
+    ConversationStorage.setCurrentConversationId(null);
   }, []);
-
-  // Save current conversation ID to localStorage
-  useEffect(() => {
-    ConversationStorage.setCurrentConversationId(currentConversationId);
-  }, [currentConversationId]);
 
   // Save selected channels to localStorage
   useEffect(() => {

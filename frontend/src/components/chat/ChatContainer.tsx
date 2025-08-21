@@ -80,23 +80,7 @@ export function ChatContainer({
                 </h1>
               </div>
               
-              {/* Channel badges */}
-              {selectedChannels.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">in</span>
-                  {selectedChannels.slice(0, 3).map(channelId => (
-                    <Badge key={channelId} variant="outline" className="text-xs">
-                      <Hash className="h-2 w-2 mr-1" />
-                      {channelId}
-                    </Badge>
-                  ))}
-                  {selectedChannels.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{selectedChannels.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              )}
+
             </div>
 
             <div className="flex items-center gap-2">
