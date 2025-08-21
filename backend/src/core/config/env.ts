@@ -12,7 +12,7 @@ const EnvSchema = z.object({
 
   // Slack
   SLACK_BOT_TOKEN: z.string().startsWith('xoxb-'),
-  SLACK_USER_TOKEN: z.string().startsWith('xoxp-').optional(),
+  SLACK_USER_TOKEN: z.string().startsWith('xoxp-'), // Required for search functionality
   SLACK_SIGNING_SECRET: z.string().min(1),
   SLACK_APP_TOKEN: z.string().startsWith('xapp-').optional(),
 

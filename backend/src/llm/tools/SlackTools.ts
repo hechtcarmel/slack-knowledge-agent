@@ -326,6 +326,14 @@ export class SlackTools {
           success: false,
           error: `Search functionality requires a paid Slack plan or additional permissions.`,
         };
+      } else if (
+        errorMessage.includes('missing_scope') ||
+        errorMessage.includes('invalid_auth')
+      ) {
+        return {
+          success: false,
+          error: `Search functionality requires a valid user token with search:read scope. Please check your SLACK_USER_TOKEN configuration.`,
+        };
       }
 
       return {

@@ -4,6 +4,7 @@ import { HealthQuerySchema } from '@/api/validators/schemas.js';
 import { Logger } from '@/utils/logger.js';
 import { SlackService } from '@/services/SlackService.js';
 import { LangChainManager } from '@/llm/LangChainManager.js';
+import { getConfig } from '@/core/config/env.js';
 
 const logger = Logger.create('HealthRoutes');
 const router: Router = Router();
@@ -33,6 +34,51 @@ async function checkSlackStatus() {
   }
 
   try {
+    const config = getConfig();
+
+    // Validate token configuration
+    const tokenValidation = {
+      botToken: {
+        configured: !!config.SLACK_BOT_TOKEN,
+        valid: config.SLACK_BOT_TOKEN?.startsWith('xoxb-') || false,
+      },
+      userToken: {
+        configured: !!config.SLACK_USER_TOKEN,
+        valid: config.SLACK_USER_TOKEN?.startsWith('xoxp-') || false,
+      },
+    };
+
+    // Check if required tokens are missing or invalid
+    const missingTokens: string[] = [];
+    if (
+      !tokenValidation.botToken.configured ||
+      !tokenValidation.botToken.valid
+    ) {
+      missingTokens.push('SLACK_BOT_TOKEN (xoxb-)');
+    }
+    if (
+      !tokenValidation.userToken.configured ||
+      !tokenValidation.userToken.valid
+    ) {
+      missingTokens.push(
+        'SLACK_USER_TOKEN (xoxp-) - Required for search functionality'
+      );
+    }
+
+    if (missingTokens.length > 0) {
+      return {
+        status: 'error' as const,
+        lastCheck,
+        error: `Missing or invalid Slack tokens: ${missingTokens.join(', ')}`,
+        tokens: tokenValidation,
+        requirements: {
+          botToken: 'Required for basic Slack API operations',
+          userToken:
+            'Required for search functionality (search:read scope needed)',
+        },
+      };
+    }
+
     // Test by getting channels (cached, so it's fast)
     const channels = await slackService.getChannels();
     return {
@@ -40,6 +86,10 @@ async function checkSlackStatus() {
       lastCheck,
       channels: channels.length,
       cacheStatus: 'active',
+      tokens: {
+        botToken: 'configured',
+        userToken: 'configured',
+      },
     };
   } catch (error) {
     return {

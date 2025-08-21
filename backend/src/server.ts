@@ -222,8 +222,81 @@ class SlackKnowledgeAgentServer {
     this.configManager.watchConfig('./config/channels.json');
   }
 
+  private validateConfiguration(): void {
+    logger.info('Validating configuration...');
+
+    const missingTokens: string[] = [];
+    const invalidTokens: string[] = [];
+
+    // Check bot token
+    if (!this.config.SLACK_BOT_TOKEN) {
+      missingTokens.push('SLACK_BOT_TOKEN');
+    } else if (!this.config.SLACK_BOT_TOKEN.startsWith('xoxb-')) {
+      invalidTokens.push('SLACK_BOT_TOKEN (must start with xoxb-)');
+    }
+
+    // Check user token (required for search functionality)
+    if (!this.config.SLACK_USER_TOKEN) {
+      missingTokens.push('SLACK_USER_TOKEN');
+    } else if (!this.config.SLACK_USER_TOKEN.startsWith('xoxp-')) {
+      invalidTokens.push('SLACK_USER_TOKEN (must start with xoxp-)');
+    }
+
+    // Check OpenAI API key
+    if (!this.config.OPENAI_API_KEY) {
+      missingTokens.push('OPENAI_API_KEY');
+    } else if (!this.config.OPENAI_API_KEY.startsWith('sk-')) {
+      invalidTokens.push('OPENAI_API_KEY (must start with sk-)');
+    }
+
+    if (missingTokens.length > 0 || invalidTokens.length > 0) {
+      logger.error('Configuration validation failed');
+
+      let errorMessage = '🚨 Configuration Error - Server cannot start\n\n';
+
+      if (missingTokens.length > 0) {
+        errorMessage += '❌ Missing required environment variables:\n';
+        missingTokens.forEach(token => {
+          errorMessage += `   • ${token}\n`;
+        });
+        errorMessage += '\n';
+      }
+
+      if (invalidTokens.length > 0) {
+        errorMessage += '❌ Invalid token formats:\n';
+        invalidTokens.forEach(token => {
+          errorMessage += `   • ${token}\n`;
+        });
+        errorMessage += '\n';
+      }
+
+      errorMessage += '📋 Required configuration:\n';
+      errorMessage += '   • SLACK_BOT_TOKEN=xoxb-... (Bot User OAuth Token)\n';
+      errorMessage +=
+        '   • SLACK_USER_TOKEN=xoxp-... (User OAuth Token with search:read scope)\n';
+      errorMessage += '   • OPENAI_API_KEY=sk-... (OpenAI API Key)\n\n';
+      errorMessage += '🔗 Get Slack tokens: https://api.slack.com/apps\n';
+      errorMessage +=
+        '🔗 Get OpenAI API key: https://platform.openai.com/api-keys\n\n';
+      errorMessage +=
+        '⚠️  The SLACK_USER_TOKEN is required for search functionality.\n';
+      errorMessage +=
+        '   Make sure it has the "search:read" scope when installing your Slack app.';
+
+      console.error(errorMessage);
+      throw new Error(
+        'Configuration validation failed - see error details above'
+      );
+    }
+
+    logger.info('Configuration validation passed ✅');
+  }
+
   public async start(): Promise<void> {
     try {
+      // Validate configuration before starting services
+      this.validateConfiguration();
+
       await this.initializeConfig();
 
       // Initialize services first
