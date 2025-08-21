@@ -14,18 +14,27 @@ import {
 
 export class SlackClient {
   private client: WebClient;
+  private userClient?: WebClient;
   private logger = Logger.create('SlackClient');
   private retryManager = new RetryManager();
 
-  constructor(token: string) {
-    this.client = new WebClient(token);
+  constructor(botToken: string, userToken?: string) {
+    this.client = new WebClient(botToken);
+    if (userToken) {
+      this.userClient = new WebClient(userToken);
+    }
     // Log masked token for debugging
-    const maskedToken = token
-      ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}`
+    const maskedBotToken = botToken
+      ? `${botToken.substring(0, 10)}...${botToken.substring(botToken.length - 4)}`
       : 'NO_TOKEN';
+    const maskedUserToken = userToken
+      ? `${userToken.substring(0, 10)}...${userToken.substring(userToken.length - 4)}`
+      : 'NO_USER_TOKEN';
     this.logger.info('SlackClient initialized', {
-      tokenPreview: maskedToken,
-      tokenLength: token?.length || 0,
+      botTokenPreview: maskedBotToken,
+      userTokenPreview: maskedUserToken,
+      botTokenLength: botToken?.length || 0,
+      userTokenLength: userToken?.length || 0,
     });
   }
 
@@ -246,7 +255,9 @@ export class SlackClient {
           query = `${query} after:${after} before:${before}`;
         }
 
-        const result = await this.client.search.messages({
+        // Use user client for search if available, otherwise fall back to bot client
+        const searchClient = this.userClient || this.client;
+        const result = await searchClient.search.messages({
           query,
           count: params.limit,
         });

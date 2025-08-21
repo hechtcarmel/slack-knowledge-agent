@@ -12,6 +12,7 @@ const EnvSchema = z.object({
 
   // Slack
   SLACK_BOT_TOKEN: z.string().startsWith('xoxb-'),
+  SLACK_USER_TOKEN: z.string().startsWith('xoxp-').optional(),
   SLACK_SIGNING_SECRET: z.string().min(1),
   SLACK_APP_TOKEN: z.string().startsWith('xapp-').optional(),
 
@@ -38,8 +39,15 @@ export function getConfig(): Config {
       cachedConfig = EnvSchema.parse(process.env);
       // Log token info for debugging (masked)
       const token = cachedConfig.SLACK_BOT_TOKEN;
-      const maskedToken = token ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}` : 'NO_TOKEN';
-      console.log('Config loaded - Slack token:', maskedToken, 'Length:', token?.length);
+      const maskedToken = token
+        ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}`
+        : 'NO_TOKEN';
+      console.log(
+        'Config loaded - Slack token:',
+        maskedToken,
+        'Length:',
+        token?.length
+      );
     } catch (error) {
       if (error instanceof z.ZodError) {
         const missingVars = error.errors.map(

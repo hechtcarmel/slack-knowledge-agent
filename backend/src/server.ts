@@ -36,7 +36,10 @@ class SlackKnowledgeAgentServer {
   constructor() {
     this.app = express();
     this.configManager = new ConfigManager();
-    this.slackService = new SlackService(this.config.SLACK_BOT_TOKEN);
+    this.slackService = new SlackService(
+      this.config.SLACK_BOT_TOKEN,
+      this.config.SLACK_USER_TOKEN
+    );
     this.llmManager = new LangChainManager(
       this.config.OPENAI_API_KEY,
       this.config.ANTHROPIC_API_KEY,

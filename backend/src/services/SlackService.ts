@@ -16,8 +16,8 @@ export class SlackService {
   private cacheExpiry = 5 * 60 * 1000; // 5 minutes
   private lastCacheUpdate = 0;
 
-  constructor(token: string) {
-    this.client = new SlackClient(token);
+  constructor(botToken: string, userToken?: string) {
+    this.client = new SlackClient(botToken, userToken);
   }
 
   async initialize(): Promise<void> {
