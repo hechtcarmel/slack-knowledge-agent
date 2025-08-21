@@ -22,7 +22,7 @@ const fileFormat = winston.format.combine(
   winston.format.prettyPrint()
 );
 
-// Custom format for console logging  
+// Custom format for console logging
 const consoleFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
@@ -41,7 +41,9 @@ if (loggingConfig.console.enabled) {
   transports.push(
     new winston.transports.Console({
       level: loggingConfig.console.level,
-      format: loggingConfig.console.colorize ? consoleFormat : winston.format.simple(),
+      format: loggingConfig.console.colorize
+        ? consoleFormat
+        : winston.format.simple(),
     })
   );
 }
