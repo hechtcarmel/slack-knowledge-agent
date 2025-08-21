@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertCircle, CheckCircle, Loader2 as HealthLoader } from 'lucide-react';
 import { useHealthQuery } from '@/hooks/api';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { 
   MessageSquare, 
   Plus,
@@ -134,41 +135,72 @@ export function ChatContainer({
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border bg-card p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Add space for mobile hamburger menu */}
+            <div className="lg:hidden w-10"></div>
+            <MessageSquare className="h-5 w-5 text-primary flex-shrink-0" />
+            <h1 className="text-lg font-semibold truncate">
               {conversation?.title || 'New Chat'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
-            <StatusIndicator />
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Desktop: Full status indicator */}
+            <div className="hidden lg:block">
+              <StatusIndicator />
+            </div>
+            
+            {/* Mobile: Compact status indicator */}
+            <div className="lg:hidden">
+              <div className="text-xs text-muted-foreground">
+                {selectedChannels.length} channels
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1 lg:gap-2">
               {hasMessages && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopyWholeChat}
                   disabled={isLoading}
-                  className="cursor-pointer disabled:cursor-not-allowed"
+                  className="lg:flex hidden lg:px-3 lg:h-9"
                 >
                   {chatCopied ? (
-                    <CheckCheck className="h-4 w-4 mr-2" />
+                    <CheckCheck className="h-4 w-4 lg:mr-2" />
                   ) : (
-                    <Copy className="h-4 w-4 mr-2" />
+                    <Copy className="h-4 w-4 lg:mr-2" />
                   )}
-                  {chatCopied ? 'Copied!' : 'Copy Chat'}
+                  <span className="hidden lg:inline">{chatCopied ? 'Copied!' : 'Copy Chat'}</span>
                 </Button>
               )}
+              
+              {/* Mobile: Icon-only copy button */}
+              {hasMessages && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyWholeChat}
+                  disabled={isLoading}
+                  className="lg:hidden h-8 w-8 p-0"
+                >
+                  {chatCopied ? (
+                    <CheckCheck className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onNewConversation}
                 disabled={isLoading || !conversation}
-                className="cursor-pointer disabled:cursor-not-allowed"
+                className="lg:h-9 lg:px-3 h-8 px-2"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                New Chat
+                <Plus className="h-4 w-4 lg:mr-2" />
+                <span className="hidden lg:inline">New Chat</span>
               </Button>
             </div>
           </div>
@@ -178,14 +210,25 @@ export function ChatContainer({
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col min-h-0">
         {hasMessages ? (
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-2 lg:p-4">
             <div className="space-y-2 max-w-4xl mx-auto w-full">
               {displayMessages.map((message) => (
-                <ChatMessage
+                <ErrorBoundary
                   key={message.id}
-                  message={message}
-                  isStreaming={message.id === streamingMessageId && !!streamingMessage}
-                />
+                  fallback={
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                        <span className="text-destructive">Failed to render message</span>
+                      </div>
+                    </div>
+                  }
+                >
+                  <ChatMessage
+                    message={message}
+                    isStreaming={message.id === streamingMessageId && !!streamingMessage}
+                  />
+                </ErrorBoundary>
               ))}
               
               {/* AI Typing indicator */}
@@ -221,7 +264,7 @@ export function ChatContainer({
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex-1 flex items-center justify-center p-8">
+          <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
             <div className="text-center max-w-md mx-auto space-y-6">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                 <MessageSquare className="h-8 w-8 text-primary" />
@@ -239,7 +282,7 @@ export function ChatContainer({
 
         {/* Error Display */}
         {error && (
-          <div className="flex-shrink-0 p-4 border-t border-border">
+          <div className="flex-shrink-0 p-2 lg:p-4 border-t border-border">
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm max-w-4xl mx-auto">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
@@ -250,7 +293,7 @@ export function ChatContainer({
         )}
 
         {/* Input Area */}
-        <div className="flex-shrink-0 p-4 border-t border-border">
+        <div className="flex-shrink-0 p-2 lg:p-4 border-t border-border">
           <div className="max-w-4xl mx-auto w-full">
             <ChatInput
               onSendMessage={onSendMessage}

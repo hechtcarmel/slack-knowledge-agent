@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Hash, Users, Search, Info } from 'lucide-react';
+import { Hash, Users, Search, Info, X } from 'lucide-react';
 import { Channel } from '@/types/api';
 
 interface ChannelSelectorProps {
@@ -66,10 +66,19 @@ export function ChannelSelector({
 
       {/* Selection Status */}
       {filteredChannels.length > 0 && selectedChannels.length > 0 && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           <Badge variant="secondary">
             {selectedChannels.length} selected
           </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSelectionChange([])}
+            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3 w-3 mr-1" />
+            Clear all
+          </Button>
         </div>
       )}
 
@@ -129,12 +138,12 @@ export function ChannelSelector({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 flex-shrink-0"
+                      className="h-8 w-8 p-0 flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
                     >
-                      <Info className="h-3 w-3" />
+                      <Info className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">

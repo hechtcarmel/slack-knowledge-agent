@@ -64,3 +64,5 @@ frontend/build/
 # Cache
 .eslintcache
 .parcel-cache/
+
+.history

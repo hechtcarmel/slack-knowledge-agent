@@ -62,12 +62,12 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
 
       {/* Message Content */}
       <div className={cn(
-        'max-w-[80%] flex flex-col',
+        'max-w-[95%] lg:max-w-[80%] flex flex-col',
         isUser ? 'items-end' : 'items-start'
       )}>
         {/* Message Bubble */}
         <div className={cn(
-          'rounded-lg px-4 py-0 shadow-sm relative',
+          'rounded-lg px-3 lg:px-4 py-0 shadow-sm relative',
           isUser 
             ? 'bg-primary text-primary-foreground' 
             : 'bg-card border border-border',
@@ -170,9 +170,9 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <Info className="h-3 w-3 mr-1" />
+                  <Info className="h-4 w-4 mr-1" />
                   View Flow Details
                 </Button>
               </DialogTrigger>
