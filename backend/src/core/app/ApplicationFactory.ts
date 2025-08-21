@@ -26,6 +26,7 @@ import {
 } from '@/api/routes/health.routes.js';
 import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
 import { queryRouter, initializeQueryRoutes } from '@/routes/query.js';
+import { chatRouter, initializeChatRoutes } from '@/routes/chat.js';
 import { debugRouter, initializeDebugRoutes } from '@/routes/debug.js';
 
 /**
@@ -314,10 +315,24 @@ export class ApplicationFactory {
     initializeHealthRoutes(slackService, llmService);
     initializeDebugRoutes(slackService);
 
+    // Initialize chat routes (create ConversationService inline for now)
+    const { ConversationService } = await import(
+      '@/services/ConversationService.js'
+    );
+    const conversationService = new ConversationService({
+      maxConversations: 1000,
+      maxMessagesPerConversation: 100,
+      conversationTimeoutMs: 24 * 60 * 60 * 1000, // 24 hours
+      enablePersistence: false, // In-memory for now
+    });
+    await conversationService.initialize();
+    initializeChatRoutes(conversationService, llmService, slackService);
+
     // Mount routes
     app.use('/api/health', healthRoutes);
     app.use('/api/slack', slackRouter);
     app.use('/api/query', queryRouter);
+    app.use('/api/chat', chatRouter);
     app.use('/api/debug', debugRouter);
 
     // Placeholder Slack events endpoint

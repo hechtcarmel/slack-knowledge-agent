@@ -21,7 +21,7 @@ import {
   Copy,
   CheckCheck
 } from 'lucide-react';
-import { formatDuration, formatTimestamp, cn } from '@/lib/utils';
+import { formatDuration, cn } from '@/lib/utils';
 
 interface AdvancedMetadataProps {
   response: QueryResponse;
@@ -256,7 +256,7 @@ export function AdvancedMetadata({ response, query }: AdvancedMetadataProps) {
                         </div>
                         <div>
                           <h4 className="font-medium">
-                            {toolName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {toolName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                           </h4>
                           <p className="text-sm text-muted-foreground">
                             {typeof toolInput === 'string' 

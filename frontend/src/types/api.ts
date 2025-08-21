@@ -183,3 +183,15 @@ export interface ChannelsData {
 }
 
 export type ChannelsResponse = ApiResponse<ChannelsData>;
+
+// Re-export chat types
+export type {
+  ChatMessage,
+  Conversation,
+  ConversationSummary,
+  ChatRequest,
+  ChatResponse,
+  ConversationList,
+  StreamChunk,
+  ConversationOptions,
+} from './chat';

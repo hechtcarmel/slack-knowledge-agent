@@ -1,5 +1,10 @@
 import { Logger } from '@/utils/logger.js';
 import { LLMError } from '@/utils/errors.js';
+import {
+  QueryResult as IQueryResult,
+  StreamChunk as IStreamChunk,
+  LLMProvider as ILLMProvider,
+} from '@/interfaces/services/ILLMService.js';
 
 import { SlackService } from '@/services/SlackService.js';
 import { SlackKnowledgeAgent } from './agents/SlackKnowledgeAgent.js';
@@ -8,30 +13,14 @@ import { SlackAnthropicLLM } from './models/AnthropicLLM.js';
 import { createSlackTools } from './tools/index.js';
 import { SlackConversationMemory } from './memory/SlackMemory.js';
 
-export type LLMProvider = 'openai' | 'anthropic';
+export type LLMProvider = ILLMProvider;
 
-export interface QueryResult {
-  response: string;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-    cost_usd?: number;
-  };
-  tool_calls?: number;
-  provider: string;
-  model: string;
-  intermediate_steps?: any[];
+export interface QueryResult extends IQueryResult {
+  // This now extends the interface QueryResult from ILLMService
 }
 
-export interface StreamChunk {
-  content?: string;
-  done?: boolean;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+export interface StreamChunk extends IStreamChunk {
+  // This now extends the interface StreamChunk from ILLMService
 }
 
 export interface LLMContext {
@@ -236,10 +225,10 @@ export class LangChainManager {
       return {
         response: result.output,
         usage,
-        tool_calls: result.intermediateSteps?.length || 0,
+        toolCalls: result.intermediateSteps?.length || 0,
         provider,
         model: effectiveModel,
-        intermediate_steps: result.intermediateSteps,
+        intermediateSteps: result.intermediateSteps,
       };
     } catch (error) {
       this.logger.error('Query processing failed', error as Error, {
@@ -351,9 +340,9 @@ export class LangChainManager {
           yield {
             done: true,
             usage: {
-              prompt_tokens: usage.prompt_tokens,
-              completion_tokens: usage.completion_tokens,
-              total_tokens: usage.total_tokens,
+              promptTokens: usage.promptTokens,
+              completionTokens: usage.completionTokens,
+              totalTokens: usage.totalTokens,
             },
           };
         }
@@ -539,10 +528,10 @@ export class LangChainManager {
       );
 
       return {
-        prompt_tokens: result.usage.prompt_tokens || 0,
-        completion_tokens: result.usage.completion_tokens || 0,
-        total_tokens: result.usage.total_tokens || 0,
-        cost_usd: cost,
+        promptTokens: result.usage.prompt_tokens || 0,
+        completionTokens: result.usage.completion_tokens || 0,
+        totalTokens: result.usage.total_tokens || 0,
+        costUsd: cost,
       };
     }
 
@@ -562,10 +551,10 @@ export class LangChainManager {
     );
 
     return {
-      prompt_tokens: estimatedPromptTokens,
-      completion_tokens: estimatedCompletionTokens,
-      total_tokens: totalTokens,
-      cost_usd: cost,
+      promptTokens: estimatedPromptTokens,
+      completionTokens: estimatedCompletionTokens,
+      totalTokens: totalTokens,
+      costUsd: cost,
     };
   }
 
@@ -607,5 +596,76 @@ export class LangChainManager {
       `Validation completed. Valid providers: ${validProviders.join(', ')}`
     );
     return validProviders;
+  }
+
+  /**
+   * Process a query with conversation context
+   */
+  async processConversationQuery(
+    context: any, // ConversationLLMContext
+    config?: Partial<LLMConfig>
+  ): Promise<QueryResult> {
+    // Convert conversation context to regular LLM context
+    const llmContext: LLMContext = {
+      query: this.buildConversationAwareQuery(context),
+      channelIds: context.channelIds,
+      messages: context.messages,
+      metadata: context.metadata,
+    };
+
+    return this.processQuery(llmContext, config);
+  }
+
+  /**
+   * Stream a query response with conversation context
+   */
+  async *streamConversationQuery(
+    context: any, // ConversationLLMContext
+    config?: Partial<LLMConfig>
+  ): AsyncIterable<StreamChunk> {
+    // Convert conversation context to regular LLM context
+    const llmContext: LLMContext = {
+      query: this.buildConversationAwareQuery(context),
+      channelIds: context.channelIds,
+      messages: context.messages,
+      metadata: context.metadata,
+    };
+
+    yield* this.streamQuery(llmContext, config);
+  }
+
+  /**
+   * Build a conversation-aware query that includes chat history
+   */
+  private buildConversationAwareQuery(context: any): string {
+    if (
+      !context.conversationHistory ||
+      context.conversationHistory.length === 0
+    ) {
+      return context.query;
+    }
+
+    // Build conversation context string from last 5 messages
+    const conversationContext = context.conversationHistory
+      .slice(-5)
+      .map(
+        (msg: any) =>
+          `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+      )
+      .join('\n\n');
+
+    // Combine conversation history with current query
+    return `Previous conversation context:
+${conversationContext}
+
+Current user question: ${context.query}`;
+  }
+
+  /**
+   * Clear conversation memory
+   */
+  async clearMemory(): Promise<void> {
+    this.memory?.clear();
+    this.logger.info('Memory cleared successfully');
   }
 }

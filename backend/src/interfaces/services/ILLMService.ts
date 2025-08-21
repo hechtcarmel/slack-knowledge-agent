@@ -67,13 +67,13 @@ export interface LLMContext {
     threadTs?: string;
   }>;
   metadata: {
-    totalMessages: number;
+    total_messages: number;
     channels: Array<{
       id: string;
       name: string;
     }>;
-    searchTimeMs: number;
-    tokenCount: number;
+    search_time_ms: number;
+    token_count: number;
   };
 }
 
@@ -119,6 +119,22 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    * Clear conversation memory
    */
   clearMemory(): Promise<void>;
+
+  /**
+   * Process a query with conversation context
+   */
+  processConversationQuery(
+    context: any, // Use any to avoid circular imports
+    config?: Partial<LLMConfig>
+  ): Promise<QueryResult>;
+
+  /**
+   * Stream a query response with conversation context
+   */
+  streamConversationQuery(
+    context: any, // Use any to avoid circular imports
+    config?: Partial<LLMConfig>
+  ): AsyncIterable<StreamChunk>;
 }
 
 /**
