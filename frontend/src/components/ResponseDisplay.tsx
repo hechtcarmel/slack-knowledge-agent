@@ -42,12 +42,12 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
   return (
     <div className="space-y-6">
       {/* Response Card */}
-      <Card>
+      <Card className="border-secondary/20 bg-gradient-to-br from-card to-secondary-light/10 shadow-lg">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquareText className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-secondary-text">
+                <MessageSquareText className="h-5 w-5 text-secondary-text" />
                 AI Response
               </CardTitle>
               <CardDescription className="mt-1">
@@ -75,7 +75,7 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
+          <div className="prose prose-sm max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -126,15 +126,15 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
 
       {/* Advanced Metadata Card */}
       {(response.metadata.intermediateSteps && response.metadata.intermediateSteps.length > 0) || response.metadata.executionTrace ? (
-        <Card>
+        <Card className="border-warning/20 bg-gradient-to-br from-card to-warning-light/10 shadow-lg">
           <CardHeader>
             <button
               onClick={() => setShowAdvancedMetadata(!showAdvancedMetadata)}
               className="flex items-center justify-between w-full text-left hover:opacity-80"
             >
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Activity className="h-5 w-5 text-warning" />
                   Advanced Metadata
                 </CardTitle>
                 <CardDescription>
@@ -158,15 +158,15 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
 
       {/* Sources Card */}
       {response.sources && response.sources.length > 0 && (
-        <Card>
+        <Card className="border-success/20 bg-gradient-to-br from-card to-success-light/10 shadow-lg">
           <CardHeader>
             <button
               onClick={() => setShowSources(!showSources)}
               className="flex items-center justify-between w-full text-left hover:opacity-80"
             >
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <ExternalLink className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <ExternalLink className="h-5 w-5 text-success" />
                   Sources ({response.sources.length})
                 </CardTitle>
                 <CardDescription>

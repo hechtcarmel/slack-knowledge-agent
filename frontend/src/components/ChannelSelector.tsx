@@ -52,7 +52,7 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
           <CardDescription>Choose which channels to search</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-red-600">
+          <div className="flex items-center gap-2 text-destructive">
             <span>Failed to load channels: {error.message}</span>
           </div>
         </CardContent>
@@ -61,10 +61,10 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
   }
 
   return (
-    <Card>
+    <Card className="border-accent/20 bg-gradient-to-br from-card to-accent-light/10 shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Hash className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-primary">
+          <Hash className="h-5 w-5 text-primary" />
           Select Channels
         </CardTitle>
         <CardDescription>
@@ -156,7 +156,7 @@ function ChannelCard({ channel, isSelected, onToggle }: ChannelCardProps) {
     <div 
       className={`
         flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-colors
-        ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'}
+        ${isSelected ? 'border-primary bg-primary-light/20 shadow-md' : 'border-border hover:bg-accent-light/30'}
       `}
       onClick={onToggle}
     >

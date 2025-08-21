@@ -112,6 +112,7 @@ async function checkLLMStatus() {
   try {
     const health = llmService.getHealthStatus();
     const providers = llmService.getAvailableProviders();
+    const stats = llmService.getStats();
 
     return {
       status:
@@ -119,10 +120,13 @@ async function checkLLMStatus() {
           ? ('connected' as const)
           : ('degraded' as const),
       lastCheck,
-      currentProvider: health.currentProvider,
+      currentProvider: stats.currentProvider,
       availableProviders: providers,
-      toolsCount: health.tools,
-      memory: health.memory,
+      toolsCount: health.details?.agents?.toolsCount || 0,
+      memory: {
+        enabled: health.details?.agents?.memoryEnabled || false,
+        messageCount: health.details?.agents?.memoryMessageCount || 0,
+      },
     };
   } catch (error) {
     return {

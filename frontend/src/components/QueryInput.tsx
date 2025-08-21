@@ -30,7 +30,7 @@ export function QueryInput({
   disabled = false 
 }: QueryInputProps) {
   const [options, setOptions] = useState<QueryOptions>({
-    includeFiles: true,
+    includeFiles: false,
     includeThreads: true,
   });
   const [dateRange, setDateRange] = useState({
@@ -75,10 +75,10 @@ export function QueryInput({
   const isOverLimit = characterCount > maxCharacters;
 
   return (
-    <Card>
+    <Card className="border-primary/20 bg-gradient-to-br from-card to-primary-light/10 shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-primary">
+          <MessageSquare className="h-5 w-5 text-primary" />
           Ask a Question
         </CardTitle>
         <CardDescription>
@@ -190,7 +190,7 @@ export function QueryInput({
           <Button 
             onClick={handleSubmit}
             disabled={!query.trim() || isLoading || disabled || isOverLimit}
-            className="min-w-[120px]"
+            className="min-w-[120px] bg-gradient-primary hover:opacity-90 text-white shadow-lg"
           >
             {isLoading ? (
               <>

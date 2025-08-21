@@ -1,6 +1,5 @@
 import { useHealthQuery } from '@/hooks/api';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,11 +25,11 @@ function StatusIndicator() {
     <div className="flex items-center gap-4 text-sm">
       <div className="flex items-center gap-1">
         {isHealthy ? (
-          <CheckCircle className="h-4 w-4 text-green-600" />
+          <CheckCircle className="h-4 w-4 text-success" />
         ) : (
-          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertCircle className="h-4 w-4 text-destructive" />
         )}
-        <span className={isHealthy ? 'text-green-600' : 'text-red-600'}>
+        <span className={isHealthy ? 'text-success font-medium' : 'text-destructive font-medium'}>
           System {isHealthy ? 'Healthy' : 'Unhealthy'}
         </span>
       </div>
@@ -38,7 +37,7 @@ function StatusIndicator() {
       <div className="flex items-center gap-1">
         <div 
           className={`w-2 h-2 rounded-full ${
-            slackConnected ? 'bg-green-500' : 'bg-red-500'
+            slackConnected ? 'bg-success' : 'bg-destructive'
           }`} 
         />
         <span className="text-muted-foreground">Slack</span>
@@ -47,7 +46,7 @@ function StatusIndicator() {
       <div className="flex items-center gap-1">
         <div 
           className={`w-2 h-2 rounded-full ${
-            llmConnected ? 'bg-green-500' : 'bg-red-500'
+            llmConnected ? 'bg-success' : 'bg-destructive'
           }`} 
         />
         <span className="text-muted-foreground">
@@ -61,18 +60,17 @@ function StatusIndicator() {
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b bg-background-solid/95 backdrop-blur supports-[backdrop-filter]:bg-background-solid/60 shadow-lg">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Slack Knowledge Agent</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-3xl font-bold text-gradient-primary">Slack Knowledge Agent</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 AI-powered knowledge extraction from your Slack workspace
               </p>
             </div>
             <div className="flex items-center gap-4">
               <StatusIndicator />
-              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -82,11 +80,11 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-auto">
+      <footer className="border-t bg-background-solid/95 backdrop-blur supports-[backdrop-filter]:bg-background-solid/60 mt-auto">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <p>© 2025 Slack Knowledge Agent</p>
-            <p>Powered by AI</p>
+            <p className="text-gradient-primary font-medium">Powered by AI ✨</p>
           </div>
         </div>
       </footer>

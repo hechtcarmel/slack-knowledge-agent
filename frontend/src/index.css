@@ -1,51 +1,55 @@
-@tailwind base;
-@tailwind components;
+@import "tailwindcss/preflight";
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    /* Colorful gradient backgrounds */
+    --background: linear-gradient(135deg, #f8fafc 0%, #e7f3ff 50%, #fef3e2 100%);
+    --background-solid: 248 100% 99%;
     --foreground: 222.2 84% 4.9%;
+    
+    /* Vibrant card colors */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    
+    /* Colorful primary palette */
+    --primary: 258 90% 66%; /* Vibrant purple */
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --primary-light: 258 100% 88%;
+    
+    /* Colorful secondary palette */
+    --secondary: 197 100% 65%; /* Bright cyan */
     --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
+    --secondary-light: 197 100% 85%;
+    --secondary-text: 197 85% 35%; /* Darker cyan for text contrast */
+    
+    /* Colorful accent colors */
+    --accent: 45 100% 68%; /* Bright yellow */
     --accent-foreground: 222.2 84% 4.9%;
+    --accent-light: 45 100% 88%;
+    --accent-text: 45 85% 35%; /* Darker yellow for text contrast */
+    
+    /* Success color */
+    --success: 142 76% 56%; /* Emerald green */
+    --success-foreground: 210 40% 98%;
+    --success-light: 142 76% 86%;
+    
+    /* Warning color */
+    --warning: 38 92% 58%; /* Orange */
+    --warning-foreground: 210 40% 98%;
+    --warning-light: 38 92% 88%;
+    
+    /* Subtle colors */
+    --muted: 220 14% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 258 90% 66%;
+    --radius: 0.75rem;
   }
 }
 
@@ -54,8 +58,9 @@
     border-color: hsl(var(--border));
   }
   body {
-    background-color: hsl(var(--background));
+    background: var(--background);
     color: hsl(var(--foreground));
+    min-height: 100vh;
   }
 }
 

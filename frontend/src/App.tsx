@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { ChannelSelector } from '@/components/ChannelSelector';
 import { QueryInput } from '@/components/QueryInput';
@@ -24,7 +24,18 @@ function App() {
     query: string;
   } | null>(null);
 
+  const responseRef = useRef<HTMLDivElement>(null);
   const submitQueryMutation = useSubmitQueryMutation();
+
+  // Auto-scroll to response when it's received
+  useEffect(() => {
+    if (currentResponse && responseRef.current) {
+      responseRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  }, [currentResponse]);
 
   const handleSubmitQuery = async (queryText: string, options: QueryOptions) => {
     if (selectedChannels.length === 0) {
@@ -75,44 +86,41 @@ function App() {
           </div>
         )}
 
-        {/* Welcome Message - Show when no response */}
-        {!currentResponse && !submitQueryMutation.isPending && (
-          <div className="text-center py-12 animate-fade-in">
-            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Welcome to Slack Knowledge Agent
-            </h2>
-            <p className="text-muted-foreground text-lg mb-8">
-              AI-powered knowledge extraction from your Slack workspace
-            </p>
-            <div className="max-w-2xl mx-auto text-left">
-              <h3 className="font-semibold mb-3">How to get started:</h3>
-              <ol className="space-y-2 text-muted-foreground">
-                {[
-                  'Select the channels you want to search from',
-                  'Enter your question in the query box', 
-                  'Configure search options (files, threads, date range)',
-                  'Submit your query and get AI-powered insights'
-                ].map((step, index) => (
-                  <li key={index} className="flex items-start gap-3 animate-slide-up" style={{animationDelay: `${index * 100}ms`}}>
-                    <span className="flex-shrink-0 w-6 h-6 bg-primary/10 text-primary rounded-full text-sm flex items-center justify-center font-medium mt-0.5">
-                      {index + 1}
-                    </span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        )}
+
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Channel Selection */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-4">
             <ChannelSelector
               selectedChannels={selectedChannels}
               onSelectionChange={setSelectedChannels}
             />
+            
+            {/* Quick Start Guide */}
+            {!currentResponse && !submitQueryMutation.isPending && (
+              <div className="bg-gradient-to-br from-success-light/20 to-secondary-light/20 border border-success/20 rounded-lg p-4 animate-fade-in">
+                <h3 className="font-medium text-sm text-foreground mb-2">Quick Start</h3>
+                <ol className="space-y-1 text-xs text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-primary text-white rounded-full text-[10px] flex items-center justify-center font-medium">1</span>
+                    <span>Select channels</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-primary text-white rounded-full text-[10px] flex items-center justify-center font-medium">2</span>
+                    <span>Ask your question</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-primary text-white rounded-full text-[10px] flex items-center justify-center font-medium">3</span>
+                    <span>Configure options</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-primary text-white rounded-full text-[10px] flex items-center justify-center font-medium">4</span>
+                    <span>Get AI insights</span>
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Query and Response */}
@@ -153,7 +161,7 @@ function App() {
 
             {/* Response Display */}
             {currentResponse && !submitQueryMutation.isPending && (
-              <div className="space-y-4 animate-slide-up">
+              <div ref={responseRef} className="space-y-4 animate-slide-up">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Query Results</h3>
                   <button
