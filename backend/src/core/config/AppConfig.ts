@@ -12,6 +12,7 @@ import {
   QueryConfig,
   LoggingConfig,
   SecurityConfig,
+  WebhookConfig,
 } from './interfaces.js';
 
 // Load environment variables
@@ -54,6 +55,26 @@ const EnvironmentSchema = z.object({
     .default('false'),
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),
+
+  // Webhook
+  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: z
+    .string()
+    .transform(s => s === 'true')
+    .default('true'),
+  WEBHOOK_DUPLICATE_EVENT_TTL_MS: z
+    .string()
+    .transform(Number)
+    .default('300000'),
+  WEBHOOK_PROCESSING_TIMEOUT_MS: z.string().transform(Number).default('25000'),
+  WEBHOOK_ENABLE_THREADING: z
+    .string()
+    .transform(s => s === 'true')
+    .default('true'),
+  WEBHOOK_ENABLE_DMS: z
+    .string()
+    .transform(s => s === 'true')
+    .default('true'),
+  WEBHOOK_MAX_RESPONSE_LENGTH: z.string().transform(Number).default('4000'),
 });
 
 /**
@@ -129,6 +150,13 @@ export class AppConfig {
    */
   public getSecurityConfig(): SecurityConfig {
     return this.config.security;
+  }
+
+  /**
+   * Get webhook configuration
+   */
+  public getWebhookConfig(): WebhookConfig {
+    return this.config.webhook;
   }
 
   /**
@@ -270,6 +298,15 @@ export class AppConfig {
       trustedProxies: CONFIG_DEFAULTS.security.trustedProxies,
     };
 
+    const webhookConfig: WebhookConfig = {
+      enableSignatureValidation: env.WEBHOOK_ENABLE_SIGNATURE_VALIDATION,
+      duplicateEventTtlMs: env.WEBHOOK_DUPLICATE_EVENT_TTL_MS,
+      processingTimeoutMs: env.WEBHOOK_PROCESSING_TIMEOUT_MS,
+      enableThreading: env.WEBHOOK_ENABLE_THREADING,
+      enableDms: env.WEBHOOK_ENABLE_DMS,
+      maxResponseLength: env.WEBHOOK_MAX_RESPONSE_LENGTH,
+    };
+
     return {
       server: serverConfig,
       slack: slackConfig,
@@ -277,6 +314,7 @@ export class AppConfig {
       query: queryConfig,
       logging: loggingConfig,
       security: securityConfig,
+      webhook: webhookConfig,
     };
   }
 

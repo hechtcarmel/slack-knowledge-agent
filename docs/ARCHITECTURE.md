@@ -23,6 +23,7 @@ graph TB
     subgraph "Backend API"
         Express[Express.js Server]
         Routes[API Routes]
+        WebhookEndpoint[Webhook Endpoint]
         Middleware[Middleware Stack]
         Container[DI Container]
     end
@@ -32,6 +33,12 @@ graph TB
         SlackService[Slack Service]
         AgentManager[Agent Manager]
         QueryExecutor[Query Executor]
+    end
+    
+    subgraph "Webhook Services"
+        WebhookService[Webhook Service]
+        EventProcessor[Event Processor]
+        ResponsePoster[Response Poster]
     end
     
     subgraph "LLM Integration"
@@ -50,8 +57,14 @@ graph TB
     Browser --> React
     Mobile --> React
     React --> Express
+    SlackAPI --> WebhookEndpoint
     Express --> LLMService
     Express --> SlackService
+    WebhookEndpoint --> WebhookService
+    WebhookService --> EventProcessor
+    EventProcessor --> LLMService
+    EventProcessor --> ResponsePoster
+    ResponsePoster --> SlackAPI
     LLMService --> AgentManager
     LLMService --> QueryExecutor
     AgentManager --> LangChain
@@ -197,6 +210,107 @@ graph LR
 | `list_files` | List files shared in channels | channels, file_types, limit |
 | `get_file_content` | Get content of text files | file_id |
 
+### Webhook Architecture
+
+The system includes a real-time webhook integration that allows the bot to respond to Slack events:
+
+```mermaid
+graph TB
+    subgraph "Slack Platform"
+        SlackEvents[Event Generation]
+        SlackAPI[Slack Web API]
+    end
+    
+    subgraph "Webhook Processing"
+        WebhookEndpoint["/slack/events"]
+        WebhookService[Webhook Service<br/>• Signature validation<br/>• Event deduplication<br/>• Health monitoring]
+        EventProcessor[Event Processor<br/>• Context extraction<br/>• Event filtering<br/>• LLM coordination]
+        ResponsePoster[Response Poster<br/>• Message formatting<br/>• Thread handling<br/>• Error recovery]
+    end
+    
+    subgraph "Existing Services"
+        LLMService[LLM Service]
+        SlackKnowledgeAgent[Slack Knowledge Agent]
+        SlackTools[Slack Tools]
+    end
+    
+    SlackEvents --> WebhookEndpoint
+    WebhookEndpoint --> WebhookService
+    WebhookService --> EventProcessor
+    EventProcessor --> LLMService
+    LLMService --> SlackKnowledgeAgent
+    SlackKnowledgeAgent --> SlackTools
+    SlackTools --> SlackAPI
+    EventProcessor --> ResponsePoster
+    ResponsePoster --> SlackAPI
+```
+
+#### Webhook Service Components
+
+##### WebhookService
+**Purpose**: Main webhook orchestration and security
+**Responsibilities**:
+- HMAC-SHA256 signature validation
+- Event deduplication using TTL-based cache
+- Processing timeout management
+- Health status monitoring
+- Statistics tracking
+
+##### EventProcessor
+**Purpose**: Slack event processing and LLM coordination
+**Responsibilities**:
+- Event type filtering (app mentions, DMs)
+- Context extraction from Slack events
+- User and channel information resolution
+- LLM context preparation
+- Response coordination
+
+##### ResponsePoster
+**Purpose**: Post AI responses back to Slack
+**Responsibilities**:
+- Slack message formatting (markdown, mentions)
+- Thread handling for conversational continuity
+- Message length management and truncation
+- Error handling with user notification
+- Direct message support
+
+#### Event Flow
+
+```mermaid
+sequenceDiagram
+    participant Slack
+    participant WebhookEndpoint
+    participant WebhookService
+    participant EventProcessor
+    participant LLMService
+    participant Agent
+    participant ResponsePoster
+    
+    Slack->>WebhookEndpoint: POST /slack/events
+    WebhookEndpoint->>WebhookService: handleSlackEvent()
+    WebhookService->>WebhookService: validateSignature()
+    WebhookService->>WebhookService: checkDuplicate()
+    WebhookService->>WebhookEndpoint: 200 OK (< 3s)
+    
+    WebhookService->>EventProcessor: processEvent() [async]
+    EventProcessor->>EventProcessor: extractContext()
+    EventProcessor->>LLMService: processQuery()
+    LLMService->>Agent: invoke()
+    Agent->>Agent: Use Slack tools
+    Agent->>LLMService: response
+    LLMService->>EventProcessor: QueryResult
+    EventProcessor->>ResponsePoster: postResponse()
+    ResponsePoster->>Slack: chat.postMessage()
+```
+
+#### Security Features
+
+- **Signature Validation**: HMAC-SHA256 verification of all incoming webhooks
+- **Timestamp Validation**: Prevents replay attacks (5-minute window)
+- **Event Deduplication**: Prevents processing of duplicate events
+- **Input Sanitization**: All event data is validated and sanitized
+- **Rate Limiting**: Built-in protection against event flooding
+
 ### Configuration Management
 
 #### Hierarchical Configuration System
@@ -208,6 +322,7 @@ interface AppConfiguration {
   query: QueryConfig;
   logging: LoggingConfig;
   security: SecurityConfig;
+  webhook: WebhookConfig;
 }
 ```
 

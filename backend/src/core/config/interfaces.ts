@@ -59,6 +59,15 @@ export interface SecurityConfig {
   trustedProxies: string[];
 }
 
+export interface WebhookConfig {
+  enableSignatureValidation: boolean;
+  duplicateEventTtlMs: number;
+  processingTimeoutMs: number;
+  enableThreading: boolean;
+  enableDms: boolean;
+  maxResponseLength: number;
+}
+
 /**
  * Main application configuration interface
  */
@@ -69,6 +78,7 @@ export interface AppConfiguration {
   query: QueryConfig;
   logging: LoggingConfig;
   security: SecurityConfig;
+  webhook: WebhookConfig;
 }
 
 /**
@@ -103,6 +113,14 @@ export interface EnvironmentVariables {
   ENABLE_RATE_LIMIT: string;
   RATE_LIMIT_WINDOW_MS: string;
   RATE_LIMIT_MAX_REQUESTS: string;
+
+  // Webhook
+  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: string;
+  WEBHOOK_DUPLICATE_EVENT_TTL_MS: string;
+  WEBHOOK_PROCESSING_TIMEOUT_MS: string;
+  WEBHOOK_ENABLE_THREADING: string;
+  WEBHOOK_ENABLE_DMS: string;
+  WEBHOOK_MAX_RESPONSE_LENGTH: string;
 }
 
 /**
@@ -159,5 +177,13 @@ export const CONFIG_DEFAULTS = {
     rateLimitWindowMs: 15 * 60 * 1000, // 15 minutes
     rateLimitMaxRequests: 100,
     trustedProxies: [],
+  },
+  webhook: {
+    enableSignatureValidation: true,
+    duplicateEventTtlMs: 5 * 60 * 1000, // 5 minutes
+    processingTimeoutMs: 25 * 1000, // 25 seconds
+    enableThreading: true,
+    enableDms: true,
+    maxResponseLength: 4000,
   },
 } as const;

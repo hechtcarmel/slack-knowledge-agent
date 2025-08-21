@@ -78,3 +78,9 @@ export class InternalServerError extends BaseError {
     super(message, 'INTERNAL_SERVER_ERROR', 500, details);
   }
 }
+
+export class WebhookError extends BaseError {
+  constructor(message: string, code: string, details?: any) {
+    super(message, code, 500, details);
+  }
+}

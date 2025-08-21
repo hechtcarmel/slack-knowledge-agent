@@ -17,6 +17,8 @@ Slack Knowledge Agent is an AI-powered service that transforms your Slack worksp
 - **Context-Aware**: Provides answers with proper context, including user attribution and timestamps
 - **Tool Integration**: Uses specialized tools to access different aspects of your Slack data
 - **Memory System**: Maintains conversation context for better follow-up responses
+- **Real-time Webhooks**: Responds to @mentions in Slack channels instantly
+- **Thread Continuity**: Maintains conversations within Slack threads
 
 ### 🌐 Modern Web Interface
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
@@ -31,13 +33,16 @@ Slack Knowledge Agent is an AI-powered service that transforms your Slack worksp
 ```mermaid
 graph TB
     User[User] --> Frontend[React Frontend]
+    Slack[Slack Platform] --> Webhook[Webhook Endpoint]
     Frontend --> API[Backend API]
+    Webhook --> API
     API --> Agent[LLM Agent]
     Agent --> Tools[Slack Tools]
-    Tools --> Slack[Slack API]
+    Tools --> SlackAPI[Slack API]
     Agent --> LLM[LLM Providers]
     LLM --> OpenAI[OpenAI]
     LLM --> Anthropic[Anthropic]
+    API --> SlackAPI
 ```
 
 ### Technology Stack
@@ -113,6 +118,7 @@ Ask questions in plain English:
 - **Process Documentation**: Extract procedures and best practices from conversations
 - **Decision History**: Find past discussions about important decisions
 - **Resource Discovery**: Locate shared files, links, and resources
+- **In-Channel Assistance**: Get instant answers by mentioning the bot directly in Slack
 
 ### 🔄 Cross-Team Communication
 - **Project Updates**: Find status updates across multiple project channels
@@ -133,6 +139,8 @@ Ask questions in plain English:
 - **Reduced Interruptions**: Less need to ask colleagues for information directly
 - **Context Preservation**: Maintain full context of discussions and decisions
 - **Time Savings**: Eliminate manual searching through chat history
+- **Instant Access**: Get immediate responses in Slack without switching to web interface
+- **Seamless Workflow**: Keep conversations flowing naturally within existing Slack channels
 
 ### Knowledge Preservation
 - **Institutional Memory**: Preserve important discussions and decisions

@@ -132,6 +132,11 @@ export const SERVICE_TOKENS = {
   QUERY_EXECUTOR: Symbol('QueryExecutor'),
   AGENT_MANAGER: Symbol('AgentManager'),
 
+  // Webhook Services
+  WEBHOOK_SERVICE: Symbol('WebhookService'),
+  EVENT_PROCESSOR: Symbol('EventProcessor'),
+  RESPONSE_POSTER: Symbol('ResponsePoster'),
+
   // Tools
   SLACK_TOOLS_FACTORY: Symbol('SlackToolsFactory'),
 

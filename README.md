@@ -8,9 +8,11 @@ An AI-powered service that leverages Slack APIs to provide intelligent answers b
 - 🔍 Search messages, threads, files, and channel information
 - 🌐 Modern React web interface with Shadcn/ui components
 - 🔌 Support for OpenAI and Anthropic LLM providers
-- 📱 Slack bot integration with @mention responses
+- ⚡ **Real-time webhook integration** - Respond to @mentions instantly in Slack
+- 🧵 **Thread continuity** - Maintains conversations within Slack threads
+- 📱 Direct message support for private queries
 - 🐳 Docker containerized deployment
-- 🛡️ Secure request validation and authentication
+- 🛡️ Secure webhook signature validation and authentication
 
 ## Quick Start
 
@@ -52,6 +54,7 @@ Create a `.env` file with the following variables:
 ```env
 # Slack Configuration
 SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_USER_TOKEN=xoxp-your-user-token
 SLACK_SIGNING_SECRET=your-signing-secret
 SLACK_APP_TOKEN=xapp-your-app-token
 
@@ -70,6 +73,14 @@ MAX_QUERY_LIMIT=200
 # Server Configuration
 PORT=3000
 NODE_ENV=development
+
+# Webhook Configuration (NEW)
+WEBHOOK_ENABLE_SIGNATURE_VALIDATION=true
+WEBHOOK_DUPLICATE_EVENT_TTL_MS=300000
+WEBHOOK_PROCESSING_TIMEOUT_MS=25000
+WEBHOOK_ENABLE_THREADING=true
+WEBHOOK_ENABLE_DMS=true
+WEBHOOK_MAX_RESPONSE_LENGTH=4000
 ```
 
 ## Architecture
@@ -134,10 +145,15 @@ docker-compose up -d
 
 The API provides the following endpoints:
 
+### Core API
 - `POST /api/query` - Submit queries to the knowledge agent
 - `GET /api/channels` - Get available channels
 - `GET /api/health` - Health check
-- `POST /slack/events` - Slack events webhook
+
+### Webhook API
+- `POST /slack/events` - Slack events webhook (for @mentions and DMs)
+- `GET /slack/webhook/health` - Webhook service health check
+- `GET /slack/webhook/stats` - Webhook processing statistics
 
 See the [API Documentation](docs/api.md) for detailed information.
 

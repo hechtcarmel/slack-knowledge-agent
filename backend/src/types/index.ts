@@ -155,3 +155,6 @@ export interface BatchItem {
   reject: (error: any) => void;
   [key: string]: any;
 }
+
+// Re-export webhook types
+export * from './webhook.js';

@@ -16,6 +16,9 @@ import { Logger } from '@/utils/logger.js';
 import { SlackApiClient } from '@/services/api/SlackApiClient.js';
 import { SlackService } from '@/services/SlackService.js';
 import { LLMService } from '@/services/LLMService.js';
+import { WebhookService } from '@/services/WebhookService.js';
+import { EventProcessor } from '@/services/EventProcessor.js';
+import { ResponsePoster } from '@/services/ResponsePoster.js';
 import { errorHandlers } from '@/api/middleware/errorHandlerFactory.js';
 import { requestLogger } from '@/api/middleware/logging.middleware.js';
 
@@ -26,6 +29,7 @@ import {
 } from '@/api/routes/health.routes.js';
 import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
 import { queryRouter, initializeQueryRoutes } from '@/routes/query.js';
+import { webhookRouter, initializeWebhookRoutes } from '@/routes/webhook.js';
 
 import { debugRouter, initializeDebugRoutes } from '@/routes/debug.js';
 
@@ -190,11 +194,65 @@ export class ApplicationFactory {
       'singleton'
     );
 
+    // Register ResponsePoster service
+    container.registerFactory(
+      SERVICE_TOKENS.RESPONSE_POSTER,
+      () => {
+        const slackApiClient = container.resolve(
+          SERVICE_TOKENS.SLACK_API_CLIENT
+        );
+        const webhookConfig = appConfig.getWebhookConfig();
+        return new ResponsePoster(slackApiClient, webhookConfig);
+      },
+      'singleton'
+    );
+
+    // Register EventProcessor service
+    container.registerFactory(
+      SERVICE_TOKENS.EVENT_PROCESSOR,
+      () => {
+        const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE);
+        const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE);
+        const responsePoster = container.resolve(
+          SERVICE_TOKENS.RESPONSE_POSTER
+        );
+        const webhookConfig = appConfig.getWebhookConfig();
+        return new EventProcessor(
+          llmService,
+          slackService,
+          responsePoster,
+          webhookConfig
+        );
+      },
+      'singleton'
+    );
+
+    // Register WebhookService
+    container.registerFactory(
+      SERVICE_TOKENS.WEBHOOK_SERVICE,
+      () => {
+        const eventProcessor = container.resolve(
+          SERVICE_TOKENS.EVENT_PROCESSOR
+        );
+        const slackConfig = appConfig.getSlackConfig();
+        const webhookConfig = appConfig.getWebhookConfig();
+        return new WebhookService(
+          slackConfig.signingSecret,
+          eventProcessor,
+          webhookConfig
+        );
+      },
+      'singleton'
+    );
+
     // Mark services as eager (initialize on startup)
     const eagerServices = [
       SERVICE_TOKENS.SLACK_API_CLIENT,
       SERVICE_TOKENS.SLACK_SERVICE,
       SERVICE_TOKENS.LLM_SERVICE,
+      SERVICE_TOKENS.RESPONSE_POSTER,
+      SERVICE_TOKENS.EVENT_PROCESSOR,
+      SERVICE_TOKENS.WEBHOOK_SERVICE,
     ];
 
     for (const token of eagerServices) {
@@ -308,28 +366,21 @@ export class ApplicationFactory {
     // Resolve services for route initialization
     const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE);
     const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE);
+    const webhookService = container.resolve(SERVICE_TOKENS.WEBHOOK_SERVICE);
 
     // Initialize route handlers
     initializeSlackRoutes(slackService);
     initializeQueryRoutes(llmService, slackService);
     initializeHealthRoutes(slackService, llmService);
     initializeDebugRoutes(slackService);
+    initializeWebhookRoutes(webhookService);
 
     // Mount routes
     app.use('/api/health', healthRoutes);
     app.use('/api/slack', slackRouter);
     app.use('/api/query', queryRouter);
     app.use('/api/debug', debugRouter);
-
-    // Placeholder Slack events endpoint
-    app.post('/slack/events', (_req, res) => {
-      res.status(501).json({
-        error: {
-          message: 'Slack events endpoint not yet implemented',
-          code: 'NOT_IMPLEMENTED',
-        },
-      });
-    });
+    app.use('/slack', webhookRouter);
 
     // Root endpoint
     const serverConfig = container
@@ -367,7 +418,11 @@ export class ApplicationFactory {
               testTool: '/api/debug/test-tool',
               channels: '/api/debug/channels',
             },
-            slackEvents: '/slack/events',
+            webhook: {
+              events: '/slack/events',
+              health: '/slack/webhook/health',
+              stats: '/slack/webhook/stats',
+            },
           },
         });
       });

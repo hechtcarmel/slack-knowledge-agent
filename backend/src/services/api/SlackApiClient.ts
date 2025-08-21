@@ -460,6 +460,88 @@ export class SlackApiClient implements ISlackApiClient {
   }
 
   /**
+   * Post a message to a channel
+   */
+  public async postMessage(message: {
+    channel: string;
+    text: string;
+    thread_ts?: string;
+    blocks?: any[];
+    attachments?: any[];
+    unfurl_links?: boolean;
+    unfurl_media?: boolean;
+  }): Promise<any> {
+    try {
+      return await this.retryManager.executeWithRetry(async () => {
+        const result = await this.client.chat.postMessage(message);
+
+        if (!result.ok) {
+          throw new SlackError(
+            `Failed to post message: ${result.error}`,
+            'MESSAGE_POST_FAILED',
+            result
+          );
+        }
+
+        this.logger.info('Message posted successfully', {
+          channel: message.channel,
+          messageTs: result.ts,
+          isThreaded: !!message.thread_ts,
+        });
+
+        return result;
+      });
+    } catch (error) {
+      this.logger.error('Failed to post message', error as Error, {
+        channel: message.channel,
+        textLength: message.text.length,
+      });
+      throw new SlackError(
+        'Failed to post message to Slack',
+        'MESSAGE_POST_FAILED',
+        error
+      );
+    }
+  }
+
+  /**
+   * Open a direct message channel with a user
+   */
+  public async openDirectMessage(userId: string): Promise<any> {
+    try {
+      return await this.retryManager.executeWithRetry(async () => {
+        const result = await this.client.conversations.open({
+          users: userId,
+        });
+
+        if (!result.ok) {
+          throw new SlackError(
+            `Failed to open DM: ${result.error}`,
+            'DM_OPEN_FAILED',
+            result
+          );
+        }
+
+        this.logger.info('DM channel opened successfully', {
+          userId,
+          channelId: result.channel?.id,
+        });
+
+        return result;
+      });
+    } catch (error) {
+      this.logger.error('Failed to open DM channel', error as Error, {
+        userId,
+      });
+      throw new SlackError(
+        'Failed to open direct message channel',
+        'DM_OPEN_FAILED',
+        error
+      );
+    }
+  }
+
+  /**
    * Get user information
    */
   public async getUserInfo(userId: string): Promise<any> {

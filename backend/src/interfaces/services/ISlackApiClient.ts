@@ -73,4 +73,22 @@ export interface ISlackApiClient extends IInitializableService {
    * Get user information
    */
   getUserInfo(userId: string): Promise<any>;
+
+  /**
+   * Post a message to a channel
+   */
+  postMessage(message: {
+    channel: string;
+    text: string;
+    thread_ts?: string;
+    blocks?: any[];
+    attachments?: any[];
+    unfurl_links?: boolean;
+    unfurl_media?: boolean;
+  }): Promise<any>;
+
+  /**
+   * Open a direct message channel with a user
+   */
+  openDirectMessage(userId: string): Promise<any>;
 }
