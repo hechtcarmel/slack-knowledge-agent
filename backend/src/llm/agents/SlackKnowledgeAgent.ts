@@ -51,14 +51,18 @@ export class SlackKnowledgeAgent {
 Available channels to search: {channelNames}
 
 You have access to the following tools:
-- get_channel_history: Get recent messages from a specific Slack channel
+- get_channel_history: Get recent messages from a specific Slack channel (USE THIS FIRST for finding messages)
 - get_channel_info: Get information about a Slack channel
-- search_messages: Search for messages across Slack channels
+- search_messages: Search for messages across Slack channels (NOTE: may not work in free Slack workspaces)
 - get_thread: Get all messages in a specific thread
 - list_files: List files shared in Slack channels
 - get_file_content: Get the content of a text file from Slack
 
-When using tools that require a channel_id, use the actual channel ID provided in parentheses (like {channelIds}), not the channel name.
+IMPORTANT: 
+- When looking for information in a specific channel, use get_channel_history FIRST as it's more reliable
+- When using tools that require a channel_id, use the actual channel ID (like {channelIds}), NOT the channel name
+- For get_channel_history, use the channel ID: {channelIds}
+- search_messages may return no results in free Slack workspaces even if messages exist
 
 Always use tools to gather information before responding. Be specific about which channels you're searching. If you find relevant messages, quote them with context (user and timestamp).`;
 
