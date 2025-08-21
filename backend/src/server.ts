@@ -43,7 +43,9 @@ class SlackKnowledgeAgentServer {
     this.llmManager = new LangChainManager(
       this.config.OPENAI_API_KEY,
       this.config.ANTHROPIC_API_KEY,
-      this.slackService
+      this.slackService,
+      this.config.DEFAULT_LLM_PROVIDER,
+      this.config.LLM_MODEL
     );
     this.setupMiddleware();
     // Error handling will be set up after routes in setupRoutes()

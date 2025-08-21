@@ -67,14 +67,20 @@ export class LangChainManager {
   private agents = new Map<LLMProvider, SlackKnowledgeAgent>();
   private models = new Map<LLMProvider, SlackOpenAILLM | SlackAnthropicLLM>();
   private currentProvider: LLMProvider = 'openai';
+  private defaultProvider?: LLMProvider;
+  private defaultModel?: string;
   private tools: any[];
   private memory?: SlackConversationMemory;
 
   constructor(
     private openaiApiKey: string,
     private anthropicApiKey: string | undefined,
-    private slackService: SlackService
+    private slackService: SlackService,
+    defaultProvider?: LLMProvider,
+    defaultModel?: string
   ) {
+    this.defaultProvider = defaultProvider;
+    this.defaultModel = defaultModel;
     this.initializeModels();
     this.tools = createSlackTools(this.slackService);
   }
@@ -100,8 +106,15 @@ export class LangChainManager {
         throw new LLMError('No valid LLM providers configured', 'NO_PROVIDERS');
       }
 
-      // Set default provider to the first valid one
-      this.currentProvider = validProviders[0];
+      // Set default provider preference from config if valid; otherwise first valid
+      if (
+        this.defaultProvider &&
+        validProviders.includes(this.defaultProvider)
+      ) {
+        this.currentProvider = this.defaultProvider;
+      } else {
+        this.currentProvider = validProviders[0];
+      }
 
       this.logger.info('LangChain Manager initialized successfully', {
         validProviders,
@@ -133,11 +146,13 @@ export class LangChainManager {
       );
     }
 
+    const effectiveModel = config?.model || this.getDefaultModel(provider);
+
     this.logger.info('Processing query with LangChain agent', {
       provider,
       query: context.query.substring(0, 100) + '...',
       channels: context.channelIds.length,
-      model: config?.model || this.getDefaultModel(provider),
+      model: effectiveModel,
     });
 
     try {
@@ -170,13 +185,45 @@ export class LangChainManager {
       // Build context for the agent
       const agentContext = this.buildAgentContext(context);
 
+      // Select agent to use (respect per-request model override)
+      let agentToUse: SlackKnowledgeAgent = agent;
+
+      if (config?.model) {
+        // Create a temporary agent bound to the requested model
+        let tempModel: SlackOpenAILLM | SlackAnthropicLLM;
+        if (provider === 'openai') {
+          tempModel = new SlackOpenAILLM(this.openaiApiKey, {
+            model: effectiveModel,
+          });
+        } else {
+          tempModel = new SlackAnthropicLLM(this.anthropicApiKey as string, {
+            model: effectiveModel,
+          });
+        }
+
+        const tempAgent = new SlackKnowledgeAgent(tempModel, this.tools, {
+          maxIterations: 10,
+          verbose: process.env.NODE_ENV === 'development',
+          returnIntermediateSteps: true,
+          handleParsingErrors: true,
+          memory: this.memory,
+        });
+        await tempAgent.initialize();
+        agentToUse = tempAgent;
+      }
+
       // Execute the agent
       const startTime = Date.now();
-      const result = await agent.query(context.query, agentContext);
+      const result = await agentToUse.query(context.query, agentContext);
       const executionTime = Date.now() - startTime;
 
       // Extract usage information (estimated since LangChain doesn't always provide it)
-      const usage = this.extractUsageInfo(result, context, provider);
+      const usage = this.extractUsageInfo(
+        result,
+        context,
+        provider,
+        effectiveModel
+      );
 
       this.logger.info('Query processed successfully', {
         provider,
@@ -191,7 +238,7 @@ export class LangChainManager {
         usage,
         tool_calls: result.intermediateSteps?.length || 0,
         provider,
-        model: config?.model || this.getDefaultModel(provider),
+        model: effectiveModel,
         intermediate_steps: result.intermediateSteps,
       };
     } catch (error) {
@@ -218,6 +265,8 @@ export class LangChainManager {
     }
 
     try {
+      const effectiveModel = config?.model || this.getDefaultModel(provider);
+
       // Proactively join channels mentioned in the query before processing
       if (context.channelIds.length > 0) {
         this.logger.info(
@@ -252,13 +301,38 @@ export class LangChainManager {
 
       const agentContext = this.buildAgentContext(context);
 
+      // Select agent to use (respect per-request model override)
+      let agentToUse: SlackKnowledgeAgent = agent;
+      if (config?.model) {
+        let tempModel: SlackOpenAILLM | SlackAnthropicLLM;
+        if (provider === 'openai') {
+          tempModel = new SlackOpenAILLM(this.openaiApiKey, {
+            model: effectiveModel,
+          });
+        } else {
+          tempModel = new SlackAnthropicLLM(this.anthropicApiKey as string, {
+            model: effectiveModel,
+          });
+        }
+
+        const tempAgent = new SlackKnowledgeAgent(tempModel, this.tools, {
+          maxIterations: 10,
+          verbose: process.env.NODE_ENV === 'development',
+          returnIntermediateSteps: true,
+          handleParsingErrors: true,
+          memory: this.memory,
+        });
+        await tempAgent.initialize();
+        agentToUse = tempAgent;
+      }
+
       this.logger.info('Starting streaming query with LangChain agent', {
         provider,
         query: context.query.substring(0, 100) + '...',
         channels: context.channelIds.length,
       });
 
-      for await (const chunk of agent.streamQuery(
+      for await (const chunk of agentToUse.streamQuery(
         context.query,
         agentContext
       )) {
@@ -271,7 +345,8 @@ export class LangChainManager {
           const usage = this.extractUsageInfo(
             { output: chunk.data?.output },
             context,
-            provider
+            provider,
+            effectiveModel
           );
           yield {
             done: true,
@@ -371,15 +446,38 @@ export class LangChainManager {
   }
 
   private initializeModels(): void {
+    // Helper to decide if the configured model is compatible with a provider
+    const isModelCompatible = (
+      provider: LLMProvider,
+      model?: string
+    ): boolean => {
+      if (!model) return false;
+      return provider === 'openai'
+        ? model.toLowerCase().startsWith('gpt')
+        : model.toLowerCase().startsWith('claude');
+    };
+
     if (this.openaiApiKey && this.openaiApiKey.trim().startsWith('sk-')) {
-      this.models.set('openai', new SlackOpenAILLM(this.openaiApiKey));
+      const modelOption = isModelCompatible('openai', this.defaultModel)
+        ? { model: this.defaultModel }
+        : undefined;
+      this.models.set(
+        'openai',
+        new SlackOpenAILLM(this.openaiApiKey, modelOption)
+      );
     }
 
     if (
       this.anthropicApiKey &&
       this.anthropicApiKey.trim().startsWith('sk-ant-')
     ) {
-      this.models.set('anthropic', new SlackAnthropicLLM(this.anthropicApiKey));
+      const modelOption = isModelCompatible('anthropic', this.defaultModel)
+        ? { model: this.defaultModel }
+        : undefined;
+      this.models.set(
+        'anthropic',
+        new SlackAnthropicLLM(this.anthropicApiKey, modelOption)
+      );
     }
 
     this.logger.info('Models initialized', {
@@ -416,10 +514,13 @@ export class LangChainManager {
   private extractUsageInfo(
     result: any,
     context: LLMContext,
-    provider: string
+    provider: string,
+    modelOverride?: string
   ): any {
     // Since LangChain doesn't always provide usage info, we'll estimate
     const model = this.models.get(provider as LLMProvider);
+    const billingModel =
+      modelOverride || this.getDefaultModel(provider as LLMProvider);
 
     if (result.usage) {
       // Use actual usage if provided
@@ -428,7 +529,7 @@ export class LangChainManager {
           promptTokens: result.usage.prompt_tokens || 0,
           completionTokens: result.usage.completion_tokens || 0,
         },
-        this.getDefaultModel(provider as LLMProvider)
+        billingModel
       );
 
       return {
@@ -451,7 +552,7 @@ export class LangChainManager {
         promptTokens: estimatedPromptTokens,
         completionTokens: estimatedCompletionTokens,
       },
-      this.getDefaultModel(provider as LLMProvider)
+      billingModel
     );
 
     return {
@@ -463,6 +564,15 @@ export class LangChainManager {
   }
 
   private getDefaultModel(provider: LLMProvider): string {
+    // Prefer configured model when compatible; otherwise provider-specific default
+    const configured = this.defaultModel;
+    if (configured) {
+      const isOpenAI = provider === 'openai';
+      const ok = isOpenAI
+        ? configured.toLowerCase().startsWith('gpt')
+        : configured.toLowerCase().startsWith('claude');
+      if (ok) return configured;
+    }
     return provider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022';
   }
 

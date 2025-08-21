@@ -1,5 +1,6 @@
 import { useHealthQuery } from '@/hooks/api';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,7 +51,7 @@ function StatusIndicator() {
           }`} 
         />
         <span className="text-muted-foreground">
-          {health?.services?.llm?.currentProvider || 'LLM'}
+          {health?.services?.llm?.provider || 'LLM'}
         </span>
       </div>
     </div>
@@ -69,7 +70,10 @@ export function Layout({ children }: LayoutProps) {
                 AI-powered knowledge extraction from your Slack workspace
               </p>
             </div>
-            <StatusIndicator />
+            <div className="flex items-center gap-4">
+              <StatusIndicator />
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>

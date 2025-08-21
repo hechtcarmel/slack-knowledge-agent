@@ -77,18 +77,29 @@ function App() {
 
         {/* Welcome Message - Show when no response */}
         {!currentResponse && !submitQueryMutation.isPending && (
-          <div className="text-center py-12">
-            <h2 className="text-3xl font-bold mb-4">Welcome to Slack Knowledge Agent</h2>
+          <div className="text-center py-12 animate-fade-in">
+            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              Welcome to Slack Knowledge Agent
+            </h2>
             <p className="text-muted-foreground text-lg mb-8">
               AI-powered knowledge extraction from your Slack workspace
             </p>
             <div className="max-w-2xl mx-auto text-left">
               <h3 className="font-semibold mb-3">How to get started:</h3>
               <ol className="space-y-2 text-muted-foreground">
-                <li>1. Select the channels you want to search from</li>
-                <li>2. Enter your question in the query box</li>
-                <li>3. Configure search options (files, threads, date range)</li>
-                <li>4. Submit your query and get AI-powered insights</li>
+                {[
+                  'Select the channels you want to search from',
+                  'Enter your question in the query box', 
+                  'Configure search options (files, threads, date range)',
+                  'Submit your query and get AI-powered insights'
+                ].map((step, index) => (
+                  <li key={index} className="flex items-start gap-3 animate-slide-up" style={{animationDelay: `${index * 100}ms`}}>
+                    <span className="flex-shrink-0 w-6 h-6 bg-primary/10 text-primary rounded-full text-sm flex items-center justify-center font-medium mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
               </ol>
             </div>
           </div>
@@ -117,31 +128,47 @@ function App() {
 
             {/* Show Response or Loading */}
             {submitQueryMutation.isPending && (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <h3 className="text-lg font-semibold">Searching your Slack workspace...</h3>
-                <p className="text-muted-foreground mt-2">
-                  Analyzing {selectedChannels.length} channel{selectedChannels.length !== 1 ? 's' : ''}
-                </p>
+              <div className="text-center py-12 space-y-6">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">Searching your Slack workspace...</h3>
+                    <p className="text-muted-foreground">
+                      Analyzing {selectedChannels.length} channel{selectedChannels.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Loading skeleton for response */}
+                <div className="space-y-4 max-w-2xl mx-auto">
+                  <div className="h-4 bg-muted rounded animate-pulse"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse w-1/2"></div>
+                </div>
               </div>
             )}
 
             {/* Response Display */}
             {currentResponse && !submitQueryMutation.isPending && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-slide-up">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Query Results</h3>
                   <button
                     onClick={handleNewQuery}
-                    className="text-sm text-muted-foreground hover:text-foreground underline"
+                    className="text-sm text-muted-foreground hover:text-foreground underline transition-colors hover:scale-105"
                   >
                     Ask another question
                   </button>
                 </div>
-                <ResponseDisplay
-                  response={currentResponse.response}
-                  query={currentResponse.query}
-                />
+                <div className="animate-scale-in">
+                  <ResponseDisplay
+                    response={currentResponse.response}
+                    query={currentResponse.query}
+                  />
+                </div>
               </div>
             )}
           </div>

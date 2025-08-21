@@ -3,7 +3,10 @@ import { useChannelsQuery } from '@/hooks/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Loader2, Hash, Users, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Hash, Users, Search } from 'lucide-react';
 import { Channel } from '@/types/api';
 
 interface ChannelSelectorProps {
@@ -72,21 +75,23 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             placeholder="Search channels..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="pl-10"
           />
         </div>
 
         {/* Select All Button */}
         {filteredChannels.length > 0 && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              {selectedChannels.length} of {filteredChannels.length} selected
-            </span>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {selectedChannels.length} of {filteredChannels.length} selected
+              </Badge>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -99,9 +104,20 @@ export function ChannelSelector({ selectedChannels, onSelectionChange }: Channel
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Loading channels...</span>
+          <div className="space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg">
+                <Skeleton className="h-4 w-4 rounded" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-12 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -154,10 +170,10 @@ function ChannelCard({ channel, isSelected, onToggle }: ChannelCardProps) {
           <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="font-medium text-sm">{channel.name}</span>
           {(channel.memberCount !== undefined || channel.num_members !== undefined) && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="h-3 w-3" />
-              <span>{channel.memberCount ?? channel.num_members}</span>
-            </div>
+            <Badge variant="outline" className="text-xs">
+              <Users className="h-3 w-3 mr-1" />
+              {channel.memberCount ?? channel.num_members}
+            </Badge>
           )}
         </div>
         {channel.description && (

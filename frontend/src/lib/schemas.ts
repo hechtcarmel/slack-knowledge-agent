@@ -161,7 +161,7 @@ export const ApiErrorSchema = z.object({
   error: z.object({
     message: z.string(),
     code: z.string(),
-    details: z.record(z.unknown()).optional(),
+    details: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

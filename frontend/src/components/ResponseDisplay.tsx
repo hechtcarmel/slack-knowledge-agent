@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { QueryResponse } from '@/types/api';
 import { 
   MessageSquareText, 
@@ -208,13 +209,10 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
                 <h4 className="font-medium text-sm mb-2">Searched Channels</h4>
                 <div className="flex flex-wrap gap-2">
                   {response.metadata.channels.map((channel) => (
-                    <span 
-                      key={channel}
-                      className="px-2 py-1 bg-muted rounded-full text-xs flex items-center gap-1"
-                    >
+                    <Badge key={channel} variant="secondary" className="flex items-center gap-1">
                       <Hash className="h-3 w-3" />
                       {channel}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -251,19 +249,19 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
             <CardContent>
               <div className="space-y-3">
                 {response.sources.map((source, index) => (
-                  <div key={`${source.id}-${index}`} className="border rounded-lg p-3">
+                  <div key={`${source.id}-${index}`} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-muted rounded text-xs font-medium">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={source.type === 'message' ? 'default' : source.type === 'thread' ? 'secondary' : 'outline'}>
                           {source.type}
-                        </span>
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                        </Badge>
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <Hash className="h-3 w-3" />
                           {source.channelId}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
                           {formatTimestamp(source.timestamp)}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground italic">

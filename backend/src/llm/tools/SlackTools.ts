@@ -344,8 +344,10 @@ export class SlackTools {
   }
 
   private async getChannelHistory(params: any): Promise<ToolExecutionResult> {
+    let parsedChannelId: string | undefined;
     try {
       const validatedParams = this.getChannelHistorySchema.parse(params);
+      parsedChannelId = validatedParams.channel_id;
 
       const result = await this.slackService.getChannelHistory(
         validatedParams.channel_id,
@@ -378,12 +380,12 @@ export class SlackTools {
       ) {
         return {
           success: false,
-          error: `Cannot access channel ${validatedParams.channel_id}. The bot needs to be invited to this channel by a member. Please ask a channel member to invite the bot using: /invite @your-bot-name`,
+          error: `Cannot access channel ${parsedChannelId || '(unknown)'}. The bot needs to be invited to this channel by a member. Please ask a channel member to invite the bot using: /invite @your-bot-name`,
         };
       } else if (errorMessage.includes('channel_not_found')) {
         return {
           success: false,
-          error: `Channel ${validatedParams.channel_id} not found. Please verify the channel ID or name is correct.`,
+          error: `Channel ${parsedChannelId || '(unknown)'} not found. Please verify the channel ID or name is correct.`,
         };
       }
 

@@ -5,12 +5,15 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import './app.css'
 import App from './App.tsx'
 import { queryClient } from '@/lib/query-client'
+import { ThemeProvider } from '@/components/theme-provider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="slack-knowledge-agent-theme">
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
