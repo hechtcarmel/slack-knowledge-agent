@@ -141,6 +141,32 @@ export class LangChainManager {
     });
 
     try {
+      // Proactively join channels mentioned in the query before processing
+      if (context.channelIds.length > 0) {
+        this.logger.info('Ensuring bot access to mentioned channels', {
+          channels: context.channelIds,
+          channelCount: context.channelIds.length,
+        });
+
+        const accessResult = await this.slackService.ensureChannelAccess(
+          context.channelIds
+        );
+
+        if (accessResult.joined.length > 0) {
+          this.logger.info('Successfully joined channels proactively', {
+            joined: accessResult.joined,
+            joinedCount: accessResult.joined.length,
+          });
+        }
+
+        if (accessResult.failed.length > 0) {
+          this.logger.warn('Failed to join some channels', {
+            failed: accessResult.failed,
+            failedCount: accessResult.failed.length,
+          });
+        }
+      }
+
       // Build context for the agent
       const agentContext = this.buildAgentContext(context);
 
@@ -192,6 +218,38 @@ export class LangChainManager {
     }
 
     try {
+      // Proactively join channels mentioned in the query before processing
+      if (context.channelIds.length > 0) {
+        this.logger.info(
+          'Ensuring bot access to mentioned channels for streaming',
+          {
+            channels: context.channelIds,
+            channelCount: context.channelIds.length,
+          }
+        );
+
+        const accessResult = await this.slackService.ensureChannelAccess(
+          context.channelIds
+        );
+
+        if (accessResult.joined.length > 0) {
+          this.logger.info(
+            'Successfully joined channels proactively for streaming',
+            {
+              joined: accessResult.joined,
+              joinedCount: accessResult.joined.length,
+            }
+          );
+        }
+
+        if (accessResult.failed.length > 0) {
+          this.logger.warn('Failed to join some channels for streaming', {
+            failed: accessResult.failed,
+            failedCount: accessResult.failed.length,
+          });
+        }
+      }
+
       const agentContext = this.buildAgentContext(context);
 
       this.logger.info('Starting streaming query with LangChain agent', {

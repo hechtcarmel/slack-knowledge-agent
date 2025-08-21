@@ -177,13 +177,35 @@ export class SlackClient {
               this.logger.warn('Failed to join channel', {
                 channelId,
                 error: joinResult.error,
+                needsInvite:
+                  joinResult.error === 'cant_invite_self' ||
+                  joinResult.error === 'channel_not_found' ||
+                  joinResult.error === 'is_private',
               });
+
+              // If the join failed, throw a more specific error
+              throw new SlackError(
+                `Cannot access channel: ${joinResult.error}. The bot may need to be invited to this channel by a member.`,
+                'CHANNEL_ACCESS_DENIED',
+                joinResult
+              );
             }
           } catch (joinError) {
             this.logger.warn('Error trying to join channel', {
               channelId,
               error: joinError as Error,
             });
+
+            // Re-throw SlackError as-is, otherwise create a new one
+            if (joinError instanceof SlackError) {
+              throw joinError;
+            }
+
+            throw new SlackError(
+              `Cannot join channel: ${(joinError as Error).message}. The bot may need to be invited to this channel.`,
+              'CHANNEL_JOIN_FAILED',
+              joinError
+            );
           }
         }
 
@@ -212,6 +234,35 @@ export class SlackClient {
       throw new SlackError(
         'Failed to fetch channel history from Slack',
         'HISTORY_FETCH_FAILED',
+        error
+      );
+    }
+  }
+
+  async joinChannel(channelId: string): Promise<void> {
+    try {
+      await this.retryManager.executeWithRetry(async () => {
+        const result = await this.client.conversations.join({
+          channel: channelId,
+        });
+
+        if (!result.ok) {
+          throw new SlackError(
+            `Failed to join channel: ${result.error}`,
+            'CHANNEL_JOIN_FAILED',
+            result
+          );
+        }
+
+        this.logger.info('Successfully joined channel', { channelId });
+      });
+    } catch (error) {
+      this.logger.error('Failed to join channel', error as Error, {
+        channelId,
+      });
+      throw new SlackError(
+        'Failed to join channel',
+        'CHANNEL_JOIN_FAILED',
         error
       );
     }

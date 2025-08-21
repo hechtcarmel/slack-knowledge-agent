@@ -57,6 +57,117 @@ export class SlackService {
     return channels.find(ch => ch.name === channelName) || null;
   }
 
+  /**
+   * Proactively join channels that the bot might need to access
+   * This should be called before processing queries to ensure the bot has access
+   */
+  async ensureChannelAccess(channelIds: string[]): Promise<{
+    joined: string[];
+    alreadyMember: string[];
+    failed: { channelId: string; error: string }[];
+  }> {
+    const results = {
+      joined: [] as string[],
+      alreadyMember: [] as string[],
+      failed: [] as { channelId: string; error: string }[],
+    };
+
+    for (const channelId of channelIds) {
+      try {
+        // First check if we can already access the channel by trying to get info
+        const channel =
+          (await this.getChannelById(channelId)) ||
+          (await this.getChannelByName(channelId));
+        if (!channel) {
+          results.failed.push({ channelId, error: 'Channel not found' });
+          continue;
+        }
+
+        // Try to get a single message to test access
+        try {
+          await this.client.getChannelHistory(channel.id, { limit: 1 });
+          results.alreadyMember.push(channelId);
+          this.logger.debug('Already have access to channel', { channelId });
+        } catch (accessError: any) {
+          // Debug logging to understand error structure
+          this.logger.debug('Channel access test failed, analyzing error', {
+            channelId,
+            errorMessage: accessError.message,
+            errorCode: accessError.code,
+            errorName: accessError.constructor.name,
+            hasDetails: !!accessError.details,
+          });
+
+          // Check for not_in_channel error in different places it might appear
+          const errorMessage = accessError.message || accessError.toString();
+          const errorStack = accessError.stack || '';
+          const errorDetails = JSON.stringify(accessError.details || {});
+          const isNotInChannelError =
+            errorMessage.includes('not_in_channel') ||
+            errorStack.includes('not_in_channel') ||
+            errorDetails.includes('not_in_channel') ||
+            errorMessage.includes('An API error occurred: not_in_channel');
+
+          if (isNotInChannelError) {
+            // Need to join the channel
+            this.logger.info(
+              'Bot not in channel, attempting to join proactively',
+              { channelId }
+            );
+            try {
+              await this.client.joinChannel(channel.id);
+              results.joined.push(channelId);
+              this.logger.info('Successfully joined channel proactively', {
+                channelId,
+              });
+            } catch (joinError: any) {
+              results.failed.push({
+                channelId,
+                error: `Failed to join: ${joinError.message}`,
+              });
+              this.logger.warn('Failed to join channel proactively', {
+                channelId,
+                error: joinError.message,
+              });
+            }
+          } else {
+            // Other access error
+            results.failed.push({
+              channelId,
+              error: `Access error: ${accessError.message}`,
+            });
+            this.logger.debug('Non-joinable access error for channel', {
+              channelId,
+              error: accessError.message,
+              errorType: accessError.constructor.name,
+            });
+          }
+        }
+      } catch (error) {
+        results.failed.push({
+          channelId,
+          error: `Unexpected error: ${(error as Error).message}`,
+        });
+        this.logger.error(
+          'Unexpected error during channel access check',
+          error as Error,
+          { channelId }
+        );
+      }
+    }
+
+    if (results.joined.length > 0 || results.failed.length > 0) {
+      this.logger.info('Channel access check completed', {
+        joined: results.joined.length,
+        alreadyMember: results.alreadyMember.length,
+        failed: results.failed.length,
+        failedChannels: results.failed.map(f => `${f.channelId}: ${f.error}`),
+      });
+    }
+
+    return results;
+  }
+
   async searchMessages(params: SearchParams): Promise<{
     messages: Message[];
     metadata: {
