@@ -158,7 +158,34 @@ export class SlackClient {
         if (options.oldest) historyOptions.oldest = options.oldest;
         if (options.latest) historyOptions.latest = options.latest;
 
-        const result = await this.client.conversations.history(historyOptions);
+        let result = await this.client.conversations.history(historyOptions);
+
+        // If not in channel, try to join first
+        if (!result.ok && result.error === 'not_in_channel') {
+          this.logger.info('Bot not in channel, attempting to join', {
+            channelId,
+          });
+          try {
+            const joinResult = await this.client.conversations.join({
+              channel: channelId,
+            });
+            if (joinResult.ok) {
+              this.logger.info('Successfully joined channel', { channelId });
+              // Retry getting history after joining
+              result = await this.client.conversations.history(historyOptions);
+            } else {
+              this.logger.warn('Failed to join channel', {
+                channelId,
+                error: joinResult.error,
+              });
+            }
+          } catch (joinError) {
+            this.logger.warn('Error trying to join channel', {
+              channelId,
+              error: joinError as Error,
+            });
+          }
+        }
 
         if (!result.ok || !result.messages) {
           throw new SlackError(
@@ -257,10 +284,47 @@ export class SlackClient {
 
         // Use user client for search if available, otherwise fall back to bot client
         const searchClient = this.userClient || this.client;
-        const result = await searchClient.search.messages({
+        let result = await searchClient.search.messages({
           query,
           count: params.limit,
         });
+
+        // If search fails and we have specific channel errors, try joining those channels
+        if (
+          !result.ok &&
+          result.error &&
+          params.channels &&
+          params.channels.length > 0
+        ) {
+          this.logger.info('Search failed, attempting to join channels', {
+            channels: params.channels,
+            error: result.error,
+          });
+
+          for (const channelId of params.channels) {
+            try {
+              const joinResult = await this.client.conversations.join({
+                channel: channelId,
+              });
+              if (joinResult.ok) {
+                this.logger.info('Successfully joined channel for search', {
+                  channelId,
+                });
+              }
+            } catch (joinError) {
+              this.logger.warn('Failed to join channel for search', {
+                channelId,
+                error: joinError as Error,
+              });
+            }
+          }
+
+          // Retry search after attempting to join channels
+          result = await searchClient.search.messages({
+            query,
+            count: params.limit,
+          });
+        }
 
         if (!result.ok || !result.messages?.matches) {
           throw new SlackError(
