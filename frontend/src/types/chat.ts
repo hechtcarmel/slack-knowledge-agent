@@ -25,6 +25,19 @@ export interface ChatMessage {
     model?: string;
     intermediateSteps?: any[];
     toolCalls?: number;
+    executionTrace?: {
+      query_time: number;
+      channels_searched: Array<{
+        id: string;
+        name: string;
+      }>;
+      context: {
+        metadata: {
+          total_messages: number;
+          search_time_ms: number;
+        };
+      };
+    };
   };
 }
 

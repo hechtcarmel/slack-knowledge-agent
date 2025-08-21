@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useChannelsQuery } from '@/hooks/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,17 +45,11 @@ export function ChannelSelector({
     }
   };
 
-  const handleSelectAll = () => {
-    if (selectedChannels.length === filteredChannels.length) {
-      onSelectionChange([]);
-    } else {
-      onSelectionChange(filteredChannels.map(channel => channel.id));
-    }
-  };
+
 
   // Content component
   const SelectorContent = () => (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col h-full">
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -69,21 +62,12 @@ export function ChannelSelector({
         />
       </div>
 
-      {/* Select All Button */}
-      {filteredChannels.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {selectedChannels.length} of {filteredChannels.length} selected
-            </Badge>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSelectAll}
-          >
-            {selectedChannels.length === filteredChannels.length ? 'Deselect All' : 'Select All'}
-          </Button>
+      {/* Selection Status */}
+      {filteredChannels.length > 0 && selectedChannels.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">
+            {selectedChannels.length} selected
+          </Badge>
         </div>
       )}
 
@@ -108,7 +92,7 @@ export function ChannelSelector({
 
       {/* Channel List */}
       {!isLoading && (
-        <div className="space-y-2 max-h-80 overflow-y-auto">
+        <div className="space-y-2 flex-1 overflow-y-auto">
           {filteredChannels.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchQuery ? 'No channels match your search' : 'No channels available'}

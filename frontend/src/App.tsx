@@ -62,13 +62,13 @@ function App() {
       setIsAiTyping(false);
 
       // Add AI response to messages
-      if (response.data?.message) {
+      if (response.message) {
         const aiMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
           role: 'assistant',
-          content: response.data.message.content,
+          content: response.message.content,
           timestamp: new Date().toISOString(),
-          metadata: response.data.message.metadata,
+          metadata: response.message.metadata,
         };
         setMessages(prev => [...prev, aiMessage]);
       }
@@ -88,7 +88,7 @@ function App() {
   // Create a simple conversation object for the ChatContainer
   const currentConversation = messages.length > 0 ? {
     id: 'current',
-    title: 'Current Chat',
+    title: 'Chat',
     messages,
     channels: selectedChannels,
     options: defaultOptions,
@@ -108,7 +108,7 @@ function App() {
     <div className="h-screen bg-background">
       <div className="h-full flex">
         {/* Channel Selection Sidebar */}
-        <div className="w-80 border-r border-border bg-card flex flex-col">
+        <div className="w-80 border-r border-border bg-card flex flex-col h-full">
           <div className="p-4 border-b border-border">
             <h2 className="text-lg font-semibold mb-4">Slack Knowledge Agent</h2>
             

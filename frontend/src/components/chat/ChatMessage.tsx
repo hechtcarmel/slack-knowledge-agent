@@ -10,14 +10,21 @@ import {
   CheckCheck,
   Hash,
   ExternalLink,
-  ChevronDown,
-  ChevronRight,
   User,
   Bot,
   Clock,
   Zap,
+  Info,
 } from 'lucide-react';
 import { cn, formatTimestamp } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -26,8 +33,7 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
-  const [showMetadata, setShowMetadata] = useState(false);
-  const [showSources, setShowSources] = useState(false);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
 
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -152,100 +158,131 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
             </>
           )}
 
-          {/* Show token usage for assistant messages */}
-          {isAssistant && message.metadata?.tokenUsage && (
-            <>
-              <span>•</span>
-              <span>{message.metadata.tokenUsage.total} tokens</span>
-            </>
-          )}
 
-          {/* Metadata toggle for assistant messages */}
-          {isAssistant && (message.metadata?.sources?.length || message.metadata?.intermediateSteps?.length) && (
-            <>
-              <span>•</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMetadata(!showMetadata)}
-                className="h-4 px-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                {showMetadata ? (
-                  <ChevronDown className="h-3 w-3" />
-                ) : (
-                  <ChevronRight className="h-3 w-3" />
-                )}
-                Details
-              </Button>
-            </>
-          )}
+
         </div>
 
-        {/* Expanded Metadata */}
-        {showMetadata && isAssistant && (
-          <div className="mt-2 space-y-2 w-full">
-            {/* Sources */}
-            {message.metadata?.sources && message.metadata.sources.length > 0 && (
-              <div className="bg-accent/30 rounded-md p-3 text-sm">
-                <button
-                  onClick={() => setShowSources(!showSources)}
-                  className="flex items-center gap-2 font-medium text-foreground mb-2 hover:opacity-80"
+        {/* Metadata Dialog Button for assistant messages */}
+        {isAssistant && message.metadata && (
+          <div className="mt-1">
+            <Dialog open={showMetadataDialog} onOpenChange={setShowMetadataDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  <ExternalLink className="h-4 w-4" />
-                  Sources ({message.metadata.sources.length})
-                  {showSources ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                </button>
+                  <Info className="h-3 w-3 mr-1" />
+                  View Flow Details
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Message Flow Details</DialogTitle>
+                  <DialogDescription>
+                    Detailed information about how this response was generated
+                  </DialogDescription>
+                </DialogHeader>
                 
-                {showSources && (
+                <div className="space-y-6">
+                  {/* Query Information */}
                   <div className="space-y-2">
-                    {message.metadata.sources.map((source, index) => (
-                      <div key={`${source.id}-${index}`} className="border rounded-md p-2 bg-background">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={source.type === 'message' ? 'default' : 'secondary'} className="text-xs">
-                            {source.type}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            <Hash className="h-2 w-2" />
-                            {source.channelId}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTimestamp(source.timestamp)}
-                          </span>
+                    <h3 className="font-semibold text-sm">Query Information</h3>
+                    <div className="bg-muted p-3 rounded-md text-sm">
+                      <div>Provider: {message.metadata.llmProvider}</div>
+                      {message.metadata.model && (
+                        <div>Model: {message.metadata.model}</div>
+                      )}
+                      {message.metadata.processingTime && (
+                        <div>Processing Time: {(message.metadata.processingTime / 1000).toFixed(1)}s</div>
+                      )}
+                      {message.metadata.tokenUsage && (
+                        <div>
+                          Tokens: {message.metadata.tokenUsage.prompt} prompt + {message.metadata.tokenUsage.completion} completion = {message.metadata.tokenUsage.total} total
                         </div>
-                        <p className="text-xs text-muted-foreground italic">
-                          "{source.snippet}"
-                        </p>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Technical Metadata */}
-            {message.metadata && (
-              <div className="bg-muted/30 rounded-md p-3 text-xs space-y-1">
-                <div className="font-medium text-foreground mb-2">Technical Details</div>
-                {message.metadata.llmProvider && (
-                  <div>Provider: {message.metadata.llmProvider}</div>
-                )}
-                {message.metadata.model && (
-                  <div>Model: {message.metadata.model}</div>
-                )}
-                {message.metadata.tokenUsage && (
-                  <div>
-                    Tokens: {message.metadata.tokenUsage.prompt} prompt + {message.metadata.tokenUsage.completion} completion = {message.metadata.tokenUsage.total} total
-                  </div>
-                )}
-                {message.metadata.toolCalls && (
-                  <div>Tool Calls: {message.metadata.toolCalls}</div>
-                )}
-              </div>
-            )}
+                  {/* Tool Calls */}
+                  {message.metadata.toolCalls && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Tool Calls</h3>
+                      <div className="bg-muted p-3 rounded-md text-sm">
+                        <div>Number of tool calls: {message.metadata.toolCalls}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Intermediate Steps */}
+                  {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Agent Steps ({message.metadata.intermediateSteps.length})</h3>
+                      <div className="space-y-3">
+                        {message.metadata.intermediateSteps.map((step, index) => (
+                          <div key={index} className="border rounded-md p-3 space-y-2">
+                            <div className="font-medium text-sm">Step {index + 1}: {step.action.tool}</div>
+                            <div className="text-sm">
+                              <div className="font-medium mb-1">Input:</div>
+                              <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">
+                                {JSON.stringify(step.action.toolInput, null, 2)}
+                              </pre>
+                            </div>
+                            <div className="text-sm">
+                              <div className="font-medium mb-1">Output:</div>
+                              <div className="bg-muted p-2 rounded text-xs">
+                                {typeof step.observation === 'string' ? step.observation : JSON.stringify(step.observation, null, 2)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sources */}
+                  {message.metadata.sources && message.metadata.sources.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Sources ({message.metadata.sources.length})</h3>
+                      <div className="space-y-2">
+                        {message.metadata.sources.map((source, index) => (
+                          <div key={`${source.id}-${index}`} className="border rounded-md p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant={source.type === 'message' ? 'default' : 'secondary'} className="text-xs">
+                                {source.type}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                <Hash className="h-2 w-2" />
+                                {source.channelId}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTimestamp(source.timestamp)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground italic">
+                              "{source.snippet}"
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Execution Trace */}
+                  {message.metadata.executionTrace && (
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Execution Trace</h3>
+                      <div className="bg-muted p-3 rounded-md text-sm space-y-2">
+                        <div>Query Time: {message.metadata.executionTrace.query_time}ms</div>
+                        <div>Channels Searched: {message.metadata.executionTrace.channels_searched.map((c: any) => c.name).join(', ')}</div>
+                        <div>Total Messages: {message.metadata.executionTrace.context.metadata.total_messages}</div>
+                        <div>Search Time: {message.metadata.executionTrace.context.metadata.search_time_ms}ms</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>

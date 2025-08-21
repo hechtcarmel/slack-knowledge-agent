@@ -3,29 +3,6 @@ import { ChatRequest, ChatResponse } from '@/types/chat';
 
 // Simple Chat API client class
 class ChatApiClient {
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `/api/chat${endpoint}`;
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    const response = await fetch(url, config);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || data.error || `HTTP ${response.status}`);
-    }
-
-    return data;
-  }
-
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     // Use the existing /api/query endpoint which works
     const queryRequest = {
@@ -62,9 +39,19 @@ class ChatApiClient {
     };
 
     return {
-      status: 'success',
-      data: {
-        message: aiMessage,
+      conversationId: 'current',
+      message: aiMessage,
+      conversation: {
+        id: 'current',
+        title: 'Chat',
+        messages: [aiMessage],
+        channels: request.channels,
+        options: request.options || {
+          includeFiles: false,
+          includeThreads: true,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
     };
   }

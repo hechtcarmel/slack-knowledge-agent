@@ -62,9 +62,9 @@ export function ChatInput({
   const canSend = message.trim() && !isLoading && !disabled && !isOverLimit;
 
   return (
-    <div className="border-t bg-background p-4">
+    <div className="border-t bg-background p-4 rounded-lg">
       <div className="max-w-4xl mx-auto">
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-3 items-center">
           {/* Message Input */}
           <div className="flex-1 space-y-2">
             <div className="relative">

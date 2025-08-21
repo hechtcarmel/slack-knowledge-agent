@@ -4,7 +4,8 @@ import { ChatInput } from './ChatInput';
 import { Conversation, ChatMessage as ChatMessageType } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2 as HealthLoader } from 'lucide-react';
+import { useHealthQuery } from '@/hooks/api';
 import { 
   MessageSquare, 
   Plus,
@@ -35,6 +36,7 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [streamingMessageId] = useState(() => `streaming-${Date.now()}`);
+  const { data: health, isLoading: healthLoading } = useHealthQuery();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -56,6 +58,57 @@ export function ChatContainer({
 
   const hasMessages = displayMessages.length > 0;
 
+  // Status indicator component
+  const StatusIndicator = () => {
+    if (healthLoading) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <HealthLoader className="h-4 w-4 animate-spin" />
+          <span>Checking status...</span>
+        </div>
+      );
+    }
+
+    const isHealthy = health?.status === 'healthy';
+    const slackConnected = health?.services.slack.status === 'connected';
+    const llmConnected = health?.services.llm.status === 'connected';
+
+    return (
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-1">
+          {isHealthy ? (
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          )}
+          <span className={isHealthy ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+            {isHealthy ? 'Healthy' : 'Unhealthy'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <div 
+            className={`w-2 h-2 rounded-full ${
+              slackConnected ? 'bg-green-500' : 'bg-red-500'
+            }`} 
+          />
+          <span className="text-muted-foreground">Slack</span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <div 
+            className={`w-2 h-2 rounded-full ${
+              llmConnected ? 'bg-green-500' : 'bg-red-500'
+            }`} 
+          />
+          <span className="text-muted-foreground">
+            {health?.services?.llm?.provider || 'LLM'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
@@ -68,15 +121,19 @@ export function ChatContainer({
             </h1>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onNewConversation}
-            disabled={isLoading}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Chat
-          </Button>
+          <div className="flex items-center gap-4">
+            <StatusIndicator />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNewConversation}
+              disabled={isLoading || !conversation}
+              className="cursor-pointer disabled:cursor-not-allowed"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -84,7 +141,7 @@ export function ChatContainer({
       <div className="flex-1 flex flex-col min-h-0">
         {hasMessages ? (
           <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4 max-w-4xl mx-auto w-full">
+            <div className="space-y-2 max-w-4xl mx-auto w-full">
               {displayMessages.map((message) => (
                 <ChatMessage
                   key={message.id}
