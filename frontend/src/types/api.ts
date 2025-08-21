@@ -44,6 +44,63 @@ export interface QueryRequest {
   };
 }
 
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+export interface ToolExecutionResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  metadata?: {
+    executionTime?: number;
+    toolName?: string;
+    [key: string]: any;
+  };
+}
+
+export interface IntermediateStep {
+  action: {
+    tool: string;
+    toolInput: any;
+    log?: string;
+  };
+  observation: string | ToolExecutionResult;
+}
+
+export interface ExecutionTrace {
+  query_time: number;
+  channels_searched: Array<{
+    id: string;
+    name: string;
+  }>;
+  context: {
+    query: string;
+    channelIds: string[];
+    messages: Array<{
+      channel: string;
+      user: string;
+      text: string;
+      timestamp: string;
+      thread_ts?: string;
+    }>;
+    metadata: {
+      total_messages: number;
+      channels: Array<{
+        id: string;
+        name: string;
+      }>;
+      search_time_ms: number;
+      token_count: number;
+    };
+  };
+}
+
 export interface QueryResponse {
   response: string;
   metadata: {
@@ -56,6 +113,11 @@ export interface QueryResponse {
     };
     processingTime: number;
     llmProvider: string;
+    // Advanced observability data
+    intermediateSteps?: IntermediateStep[];
+    executionTrace?: ExecutionTrace;
+    toolCalls?: ToolCall[];
+    model?: string;
   };
   sources?: Array<{
     type: 'message' | 'thread' | 'file';

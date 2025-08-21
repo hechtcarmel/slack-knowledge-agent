@@ -137,6 +137,12 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
             usage: result.usage,
             tool_calls: result.tool_calls,
             response_time_ms: responseTime,
+            intermediate_steps: result.intermediate_steps,
+            execution_trace: {
+              query_time: responseTime,
+              channels_searched: channelInfo,
+              context: llmContext,
+            },
           },
         },
       });

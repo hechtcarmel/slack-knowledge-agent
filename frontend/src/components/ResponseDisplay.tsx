@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { QueryResponse } from '@/types/api';
+import { AdvancedMetadata } from '@/components/AdvancedMetadata';
 import { 
   MessageSquareText, 
   Copy, 
@@ -15,7 +16,8 @@ import {
   Zap, 
   ExternalLink,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import { formatDuration, formatTimestamp, cn } from '@/lib/utils';
 
@@ -28,6 +30,7 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [showSources, setShowSources] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
+  const [showAdvancedMetadata, setShowAdvancedMetadata] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -220,6 +223,38 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
           </CardContent>
         )}
       </Card>
+
+      {/* Advanced Metadata Card */}
+      {(response.metadata.intermediateSteps && response.metadata.intermediateSteps.length > 0) || response.metadata.executionTrace ? (
+        <Card>
+          <CardHeader>
+            <button
+              onClick={() => setShowAdvancedMetadata(!showAdvancedMetadata)}
+              className="flex items-center justify-between w-full text-left hover:opacity-80"
+            >
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Advanced Metadata
+                </CardTitle>
+                <CardDescription>
+                  Detailed execution trace and observability data
+                </CardDescription>
+              </div>
+              {showAdvancedMetadata ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+          </CardHeader>
+          {showAdvancedMetadata && (
+            <CardContent>
+              <AdvancedMetadata response={response} query={query} />
+            </CardContent>
+          )}
+        </Card>
+      ) : null}
 
       {/* Sources Card */}
       {response.sources && response.sources.length > 0 && (

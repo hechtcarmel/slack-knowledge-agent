@@ -104,6 +104,8 @@ class ApiClient {
           };
           tool_calls?: number;
           response_time_ms: number;
+          intermediate_steps?: any[];
+          execution_trace?: any;
         };
       };
     }>('/query', {
@@ -124,6 +126,10 @@ class ApiClient {
         },
         processingTime: response.data.metadata.response_time_ms,
         llmProvider: response.data.metadata.provider,
+        model: response.data.metadata.model,
+        // Pass through advanced observability data
+        intermediateSteps: response.data.metadata.intermediate_steps,
+        executionTrace: response.data.metadata.execution_trace,
       },
       sources: [], // TODO: Add sources when backend provides them
     };
