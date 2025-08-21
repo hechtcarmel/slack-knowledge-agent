@@ -357,11 +357,21 @@ export class SlackClient {
 
         // Add channel filters to search query
         if (params.channels.length > 0) {
-          const channelFilter = params.channels
-            .map(ch => `in:${ch}`)
-            .join(' OR ');
-          query = `${query} (${channelFilter})`;
+          // Try without channel filter first, then filter results
+          // Channel filters in Slack search can be unreliable
+          this.logger.debug(
+            'Skipping channel filter in query, will filter results instead',
+            {
+              requestedChannels: params.channels,
+            }
+          );
         }
+
+        this.logger.debug('Search query built', {
+          originalQuery: params.query,
+          channels: params.channels,
+          finalQuery: query,
+        });
 
         // Add date range if specified
         if (params.time_range) {
@@ -372,9 +382,24 @@ export class SlackClient {
 
         // Use user client for search if available, otherwise fall back to bot client
         const searchClient = this.userClient || this.client;
+
+        this.logger.debug('Executing search with client', {
+          hasUserClient: !!this.userClient,
+          usingUserToken: !!this.userClient,
+          query,
+          count: params.limit,
+        });
+
         let result = await searchClient.search.messages({
           query,
           count: params.limit,
+        });
+
+        this.logger.debug('Search API response', {
+          ok: result.ok,
+          error: result.error,
+          matchCount: result.messages?.matches?.length || 0,
+          query,
         });
 
         // If search fails and we have specific channel errors, try joining those channels
@@ -414,15 +439,47 @@ export class SlackClient {
           });
         }
 
-        if (!result.ok || !result.messages?.matches) {
+        if (!result.ok) {
+          this.logger.warn('Search API returned error', {
+            error: result.error,
+            query,
+          });
           throw new SlackError(
-            'Failed to search messages',
+            `Search failed: ${result.error}`,
             'SEARCH_FAILED',
             result
           );
         }
 
-        return result.messages.matches.map(
+        // Return empty array if no matches, don't treat as error
+        if (!result.messages?.matches) {
+          this.logger.debug('Search returned no matches', { query });
+          return [];
+        }
+
+        let matches = result.messages.matches;
+
+        // Filter by channels if specified (since we removed it from query)
+        if (params.channels.length > 0) {
+          const channelSet = new Set(params.channels);
+          matches = matches.filter((match: any) => {
+            const matchChannelId = match.channel?.id;
+            const matchChannelName = match.channel?.name;
+
+            // Check if the match is in any of the requested channels
+            return (
+              channelSet.has(matchChannelId) || channelSet.has(matchChannelName)
+            );
+          });
+
+          this.logger.debug('Filtered search results by channel', {
+            totalMatches: result.messages.matches.length,
+            filteredMatches: matches.length,
+            requestedChannels: params.channels,
+          });
+        }
+
+        return matches.map(
           (match: any): Message => ({
             user: match.user || match.bot_id || 'unknown',
             text: match.text || '',
