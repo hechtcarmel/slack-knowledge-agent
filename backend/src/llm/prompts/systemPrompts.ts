@@ -6,7 +6,8 @@ import {
 
 export const SLACK_KNOWLEDGE_SYSTEM_PROMPT = `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
 
-You have access to the following channels: {channelNames}
+Available channels to search:
+{channels}
 
 Available tools:
 - search_messages: Search for messages across channels using keywords
@@ -29,7 +30,7 @@ Guidelines:
 
 Current query context:
 - User question: {query}
-- Available channels: {channelNames}
+- Available channels: {channels}
 - Total messages in context: {totalMessages}`;
 
 export const SLACK_KNOWLEDGE_PROMPT = ChatPromptTemplate.fromMessages([
@@ -40,7 +41,8 @@ export const SLACK_KNOWLEDGE_PROMPT = ChatPromptTemplate.fromMessages([
 // ReAct-specific prompt template
 export const REACT_PROMPT_TEMPLATE = `You are a Slack Knowledge Agent. Answer the following questions as best you can using information from the Slack workspace.
 
-Available channels to search: {channelNames}
+Available channels to search:
+{channels}
 
 You have access to the following tools:
 
@@ -52,7 +54,7 @@ Use the following format:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action: the action to take, should be one of [{tool_names}]
+Action: the action to take, should be one of {availableTools}
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)

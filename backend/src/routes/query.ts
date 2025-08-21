@@ -55,13 +55,15 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       stream: llmOptions.stream,
     });
 
-    // Build LLM context with proper channel information
+    // Build LLM context with proper channel information including descriptions
     const channelInfo = await Promise.all(
       channels.map(async (channelId: string) => {
         const channel = await slackService.getChannelById(channelId);
         return {
           id: channelId,
           name: channel?.name || channelId, // Fallback to ID if channel not found
+          purpose: channel?.purpose?.value || undefined,
+          topic: channel?.topic?.value || undefined,
         };
       })
     );
@@ -127,7 +129,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
         provider: result.provider,
         model: result.model,
         usage: result.usage,
-        toolCalls: result.tool_calls,
+        toolCalls: result.toolCalls,
       });
 
       res.json({
@@ -140,7 +142,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
             usage: result.usage,
             tool_calls: result.toolCalls,
             response_time_ms: responseTime,
-            intermediate_steps: result.intermediate_steps,
+            intermediate_steps: result.intermediateSteps,
             execution_trace: {
               query_time: responseTime,
               channels_searched: channelInfo,

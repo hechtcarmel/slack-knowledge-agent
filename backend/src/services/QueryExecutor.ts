@@ -289,16 +289,39 @@ export class QueryExecutor implements IInitializableService {
    * Build agent context from LLM context
    */
   private buildAgentContext(context: LLMContext): Record<string, any> {
-    // Build channel info string with both IDs and names
-    const channelInfo = context.metadata.channels
-      .map(ch => `${ch.name} (${ch.id})`)
-      .join(', ');
+    // Build structured channel information with names, descriptions, and IDs
+    const channelsData = context.metadata.channels.map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      purpose: ch.purpose || null,
+      topic: ch.topic || null,
+    }));
+
+    // Get available tools from the agent manager
+    const availableTools = this.getAvailableTools();
 
     return {
-      channelNames: channelInfo,
-      channelIds: context.channelIds.join(', '),
+      channels: channelsData,
       totalMessages: context.metadata.totalMessages,
+      query: context.query,
+      availableTools,
     };
+  }
+
+  /**
+   * Get list of available tool names
+   */
+  private getAvailableTools(): string[] {
+    // This is a simplified list of tool names
+    // In a more sophisticated setup, this could be retrieved from the AgentManager
+    return [
+      'get_channel_info',
+      'get_channel_history',
+      'search_messages',
+      'get_thread',
+      'list_files',
+      'get_file_content',
+    ];
   }
 
   /**

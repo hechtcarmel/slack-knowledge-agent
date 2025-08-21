@@ -71,6 +71,8 @@ export interface LLMContext {
     channels: Array<{
       id: string;
       name: string;
+      purpose?: string;
+      topic?: string;
     }>;
     search_time_ms: number;
     token_count: number;

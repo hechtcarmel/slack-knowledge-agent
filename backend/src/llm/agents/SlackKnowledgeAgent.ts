@@ -45,10 +45,11 @@ export class SlackKnowledgeAgent {
         hasMemory: !!this.memory,
       });
 
-      // Create Tool Calling prompt template
+      // Create Tool Calling prompt template - channel info will be formatted dynamically
       const systemMessage = `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
 
-Available channels to search: {channelNames}
+Available channels to search:
+{channels}
 
 You have access to the following tools. The tool schemas will be automatically provided - use the exact parameter names and formats they specify:
 
@@ -61,7 +62,7 @@ You have access to the following tools. The tool schemas will be automatically p
 
 IMPORTANT: 
 - Always use the exact parameter names and formats specified in the tool schemas
-- For channel parameters: use channel IDs like {channelIds}, not channel names
+- For channel parameters: use channel IDs (not channel names)
 - For search_messages: pass channels as an array, e.g., ["C09B8CNEQNR"] 
 - For single channel tools: use channel_id as a string
 
@@ -133,10 +134,13 @@ Always use tools to gather information before responding. If you find relevant i
 
       const startTime = Date.now();
 
-      // Execute the agent with input and context
+      // Format structured context for the agent
+      const formattedContext = this.formatContext(context);
+
+      // Execute the agent with input and formatted context
       const result = await this.agent.invoke({
         input,
-        ...context,
+        ...formattedContext,
       });
 
       const executionTime = Date.now() - startTime;
@@ -161,6 +165,31 @@ Always use tools to gather information before responding. If you find relevant i
     }
   }
 
+  /**
+   * Format structured context data for prompt templates
+   */
+  private formatContext(context: Record<string, any>): Record<string, any> {
+    const formatted = { ...context };
+
+    // Format channels array into readable string
+    if (context.channels && Array.isArray(context.channels)) {
+      formatted.channels = context.channels
+        .map((ch: any) => {
+          let channelInfo = `- ${ch.name} (${ch.id})`;
+          if (ch.purpose) {
+            channelInfo += ` - Purpose: ${ch.purpose}`;
+          }
+          if (ch.topic) {
+            channelInfo += ` - Topic: ${ch.topic}`;
+          }
+          return channelInfo;
+        })
+        .join('\n');
+    }
+
+    return formatted;
+  }
+
   async *streamQuery(
     input: string,
     context: Record<string, any> = {}
@@ -175,10 +204,13 @@ Always use tools to gather information before responding. If you find relevant i
         context: Object.keys(context),
       });
 
+      // Format structured context for the agent
+      const formattedContext = this.formatContext(context);
+
       const stream = await this.agent.streamEvents(
         {
           input,
-          ...context,
+          ...formattedContext,
         },
         { version: 'v1' }
       );

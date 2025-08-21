@@ -492,17 +492,19 @@ export class LangChainManager {
   }
 
   private buildAgentContext(context: LLMContext): Record<string, any> {
-    // Build channel info string with both IDs and names
-    const channelInfo = context.metadata.channels
-      .map(ch => `${ch.name} (${ch.id})`)
-      .join(', ');
+    // Build structured channel information with names, descriptions, and IDs
+    const channelsData = context.metadata.channels.map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      purpose: (ch as any).purpose || null,
+      topic: (ch as any).topic || null,
+    }));
 
     return {
-      channelNames: channelInfo,
-      channelIds: context.channelIds.join(', '),
+      channels: channelsData,
       totalMessages: context.metadata.total_messages,
-      // Pass tool names for the ReAct prompt template
-      tool_names: this.tools.map(tool => tool.name).join(', '),
+      query: context.query,
+      availableTools: this.tools.map(tool => tool.name),
     };
   }
 
@@ -596,13 +598,5 @@ export class LangChainManager {
       `Validation completed. Valid providers: ${validProviders.join(', ')}`
     );
     return validProviders;
-  }
-
-  /**
-   * Clear conversation memory
-   */
-  async clearMemory(): Promise<void> {
-    this.memory?.clear();
-    this.logger.info('Memory cleared successfully');
   }
 }
