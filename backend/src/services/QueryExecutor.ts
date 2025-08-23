@@ -310,6 +310,7 @@ export class QueryExecutor implements IInitializableService {
       channels: channelsData,
       totalMessages: context.metadata.total_messages,
       query: context.query,
+      conversationHistory: context.messages, // Include message history for context
       availableTools,
     };
   }

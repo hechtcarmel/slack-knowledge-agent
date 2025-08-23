@@ -161,7 +161,13 @@ export class EventProcessor implements IEventProcessor {
 
       // Get recent context from the channel if it's a threaded conversation
       let channelIds = [channel.id];
-      let additionalContext = '';
+      let contextMessages: Array<{
+        channel: string;
+        user: string;
+        text: string;
+        timestamp: string;
+        threadTs?: string;
+      }> = [];
 
       if (eventData.thread_ts && this.config.enableThreading) {
         try {
@@ -171,10 +177,16 @@ export class EventProcessor implements IEventProcessor {
           );
 
           if (threadHistory.messages.length > 1) {
-            additionalContext = `\n\nThread context:\n${threadHistory.messages
+            // Convert thread messages to proper LLM context format
+            contextMessages = threadHistory.messages
               .slice(0, 5) // Limit to last 5 messages
-              .map(msg => `${msg.user}: ${msg.text}`)
-              .join('\n')}`;
+              .map(msg => ({
+                channel: eventData.channel,
+                user: msg.user,
+                text: msg.text,
+                timestamp: msg.ts,
+                threadTs: msg.thread_ts,
+              }));
           }
         } catch (error) {
           this.logger.warn('Failed to get thread context', {
@@ -185,11 +197,11 @@ export class EventProcessor implements IEventProcessor {
       }
 
       return {
-        query: mentionText + additionalContext,
+        query: mentionText,
         channelIds,
-        messages: [],
+        messages: contextMessages,
         metadata: {
-          total_messages: 0,
+          total_messages: contextMessages.length,
           channels: [{
             id: channel.id,
             name: channel.name,
