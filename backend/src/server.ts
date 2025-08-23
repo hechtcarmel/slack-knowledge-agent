@@ -16,7 +16,7 @@ import {
 import { SlackService } from '@/services/SlackService.js';
 import { SlackApiClient } from '@/services/api/SlackApiClient.js';
 import { LangChainManager } from '@/llm/LangChainManager.js';
-import { ConversationService } from '@/services/ConversationService.js';
+// import { ConversationService } from '@/services/ConversationService.js';
 
 // Route imports
 import {
@@ -25,7 +25,7 @@ import {
 } from '@/api/routes/health.routes.js';
 import { slackRouter, initializeSlackRoutes } from '@/routes/slack.js';
 import { queryRouter, initializeQueryRoutes } from '@/routes/query.js';
-import { chatRouter, initializeChatRoutes } from '@/routes/chat.js';
+// import { chatRouter, initializeChatRoutes } from '@/routes/chat.js';
 
 const logger = Logger.create('Server');
 
@@ -34,7 +34,7 @@ class SlackKnowledgeAgentServer {
   private configManager: ConfigManager;
   private slackService: SlackService;
   private llmManager: LangChainManager;
-  private conversationService: ConversationService;
+  // private conversationService: ConversationService;
   private config = getConfig();
 
   constructor() {
@@ -53,12 +53,12 @@ class SlackKnowledgeAgentServer {
       this.config.DEFAULT_LLM_PROVIDER,
       this.config.LLM_MODEL
     );
-    this.conversationService = new ConversationService({
-      maxConversations: 1000,
-      maxMessagesPerConversation: 100,
-      conversationTimeoutMs: 24 * 60 * 60 * 1000, // 24 hours
-      enablePersistence: false, // In-memory for now
-    });
+    // this.conversationService = new ConversationService({
+    //   maxConversations: 1000,
+    //   maxMessagesPerConversation: 100,
+    //   conversationTimeoutMs: 24 * 60 * 60 * 1000, // 24 hours
+    //   enablePersistence: false, // In-memory for now
+    // });
     this.setupMiddleware();
     // Error handling will be set up after routes in setupRoutes()
   }
@@ -114,13 +114,13 @@ class SlackKnowledgeAgentServer {
   private async setupRoutes(): Promise<void> {
     // Initialize service routes
     initializeSlackRoutes(this.slackService);
-    initializeQueryRoutes(this.llmManager, this.slackService);
-    initializeChatRoutes(
-      this.conversationService,
-      this.llmManager,
-      this.slackService
-    );
-    initializeHealthRoutes(this.slackService, this.llmManager);
+    initializeQueryRoutes(this.llmManager as any, this.slackService);
+    // initializeChatRoutes(
+    //   this.conversationService,
+    //   this.llmManager,
+    //   this.slackService
+    // );
+    initializeHealthRoutes(this.slackService, this.llmManager as any);
 
     // Health check routes
     this.app.use('/api/health', healthRoutes);
@@ -132,7 +132,7 @@ class SlackKnowledgeAgentServer {
     this.app.use('/api/query', queryRouter);
 
     // Chat routes
-    this.app.use('/api/chat', chatRouter);
+    // this.app.use('/api/chat', chatRouter);
 
     this.app.post('/slack/events', (_req, res) => {
       res.status(501).json({
@@ -335,8 +335,8 @@ class SlackKnowledgeAgentServer {
       logger.info('Initializing LLM manager...');
       await this.llmManager.initialize();
 
-      logger.info('Initializing conversation service...');
-      await this.conversationService.initialize();
+      // logger.info('Initializing conversation service...');
+      // await this.conversationService.initialize();
 
       // Set up routes after services are initialized
       await this.setupRoutes();

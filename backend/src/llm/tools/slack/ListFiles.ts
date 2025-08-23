@@ -50,29 +50,30 @@ export function createListFilesTool(
 
         const result = await slackService.getFiles(fileParams);
 
-        const response = {
-          success: true,
-          files: result.files.map(file => ({
-            id: file.id,
-            name: file.name,
-            filetype: file.filetype,
-            size: file.size,
-            channels: file.channels,
-            user: (file as any).user,
-            timestamp: (file as any).timestamp,
-            title: (file as any).title,
-            mimetype: (file as any).mimetype,
-            is_public: (file as any).is_public,
-            url_private: file.url_private,
-          })),
-          metadata: {
-            ...result.metadata,
-            channels_searched: args.channels,
-            file_types_filter: args.file_types,
-            limit_requested: args.limit,
-            file_count: result.files.length,
-          },
-        };
+        // We're not using the structured response object as we return plain text
+        // const _response = {
+        //   success: true,
+        //   files: result.files.map(file => ({
+        //     id: file.id,
+        //     name: file.name,
+        //     filetype: file.filetype,
+        //     size: file.size,
+        //     channels: file.channels,
+        //     user: (file as any).user,
+        //     timestamp: (file as any).timestamp,
+        //     title: (file as any).title,
+        //     mimetype: (file as any).mimetype,
+        //     is_public: (file as any).is_public,
+        //     url_private: file.url_private,
+        //   })),
+        //   metadata: {
+        //     ...result.metadata,
+        //     channels_searched: args.channels,
+        //     file_types_filter: args.file_types,
+        //     limit_requested: args.limit,
+        //     file_count: result.files.length,
+        //   },
+        // };
 
         logger.info('File list retrieved successfully', {
           channels: args.channels,

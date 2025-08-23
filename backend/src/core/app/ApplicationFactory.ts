@@ -19,6 +19,12 @@ import { LLMService } from '@/services/LLMService.js';
 import { WebhookService } from '@/services/WebhookService.js';
 import { EventProcessor } from '@/services/EventProcessor.js';
 import { ResponsePoster } from '@/services/ResponsePoster.js';
+import { ISlackApiClient } from '@/interfaces/services/ISlackApiClient.js';
+import { ISlackService } from '@/interfaces/services/ISlackService.js';
+import { ILLMService } from '@/interfaces/services/ILLMService.js';
+import { IEventProcessor } from '@/interfaces/services/IEventProcessor.js';
+import { IWebhookService } from '@/interfaces/services/IWebhookService.js';
+import { IResponsePoster } from '@/interfaces/services/IResponsePoster.js';
 import { errorHandlers } from '@/api/middleware/errorHandlerFactory.js';
 import { requestLogger } from '@/api/middleware/logging.middleware.js';
 
@@ -152,7 +158,7 @@ export class ApplicationFactory {
     container.registerFactory(
       SERVICE_TOKENS.SLACK_SERVICE,
       () => {
-        const apiClient = container.resolve(SERVICE_TOKENS.SLACK_API_CLIENT);
+        const apiClient = container.resolve(SERVICE_TOKENS.SLACK_API_CLIENT) as ISlackApiClient;
         return new SlackService(apiClient);
       },
       'singleton'
@@ -162,7 +168,7 @@ export class ApplicationFactory {
     container.registerFactory(
       SERVICE_TOKENS.LLM_SERVICE,
       () => {
-        const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE);
+        const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE) as ISlackService;
         const llmConfig = appConfig.getLLMConfig();
         const queryConfig = appConfig.getQueryConfig();
 
@@ -200,7 +206,7 @@ export class ApplicationFactory {
       () => {
         const slackApiClient = container.resolve(
           SERVICE_TOKENS.SLACK_API_CLIENT
-        );
+        ) as ISlackApiClient;
         const webhookConfig = appConfig.getWebhookConfig();
         return new ResponsePoster(slackApiClient, webhookConfig);
       },
@@ -211,11 +217,11 @@ export class ApplicationFactory {
     container.registerFactory(
       SERVICE_TOKENS.EVENT_PROCESSOR,
       () => {
-        const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE);
-        const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE);
+        const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE) as ILLMService;
+        const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE) as ISlackService;
         const responsePoster = container.resolve(
           SERVICE_TOKENS.RESPONSE_POSTER
-        );
+        ) as IResponsePoster;
         const webhookConfig = appConfig.getWebhookConfig();
         return new EventProcessor(
           llmService,
@@ -233,7 +239,7 @@ export class ApplicationFactory {
       () => {
         const eventProcessor = container.resolve(
           SERVICE_TOKENS.EVENT_PROCESSOR
-        );
+        ) as IEventProcessor;
         const slackConfig = appConfig.getSlackConfig();
         const webhookConfig = appConfig.getWebhookConfig();
         return new WebhookService(
@@ -272,7 +278,7 @@ export class ApplicationFactory {
    */
   private createExpressApp(
     appConfig: AppConfig,
-    options: ApplicationFactoryOptions
+    _options: ApplicationFactoryOptions
   ): ExpressApplication {
     const app = express();
     const serverConfig = appConfig.getServerConfig();
@@ -364,9 +370,9 @@ export class ApplicationFactory {
     this.logger.info('Setting up routes...');
 
     // Resolve services for route initialization
-    const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE);
-    const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE);
-    const webhookService = container.resolve(SERVICE_TOKENS.WEBHOOK_SERVICE);
+    const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE) as SlackService;
+    const llmService = container.resolve(SERVICE_TOKENS.LLM_SERVICE) as ILLMService;
+    const webhookService = container.resolve(SERVICE_TOKENS.WEBHOOK_SERVICE) as IWebhookService;
 
     // Initialize route handlers
     initializeSlackRoutes(slackService);

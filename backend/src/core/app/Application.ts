@@ -1,4 +1,4 @@
-import express, { Application as ExpressApplication } from 'express';
+import { Application as ExpressApplication } from 'express';
 import { Server } from 'http';
 import { Logger } from '@/utils/logger.js';
 import { IContainer } from '@/core/container/interfaces.js';

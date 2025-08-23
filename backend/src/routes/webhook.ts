@@ -1,9 +1,9 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Logger } from '../utils/logger.js';
 import { WebhookError } from '../utils/errors.js';
 import { IWebhookService } from '../interfaces/services/IWebhookService.js';
 
-const router = Router();
+const router: Router = Router();
 const logger = Logger.create('WebhookRoutes');
 
 // Initialize WebhookService (will be injected by server)
@@ -16,7 +16,7 @@ export function initializeWebhookRoutes(service: IWebhookService) {
 /**
  * Middleware to capture raw body for signature validation
  */
-function captureRawBody(req: Request, res: Response, next: Function) {
+function captureRawBody(req: Request, _res: Response, next: NextFunction) {
   const chunks: Buffer[] = [];
 
   req.on('data', chunk => {
@@ -48,7 +48,7 @@ function captureRawBody(req: Request, res: Response, next: Function) {
  * - Direct message events
  * - Rate limiting notifications
  */
-router.post('/events', captureRawBody, async (req: Request, res: Response) => {
+router.post('/events', captureRawBody, async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
 
   try {
@@ -65,9 +65,10 @@ router.post('/events', captureRawBody, async (req: Request, res: Response) => {
 
     if (!webhookService) {
       logger.error('WebhookService not initialized');
-      return res.status(500).json({
+      res.status(500).json({
         error: 'Webhook service not available',
       });
+      return;
     }
 
     // Process the webhook event
@@ -118,13 +119,14 @@ router.post('/events', captureRawBody, async (req: Request, res: Response) => {
 /**
  * GET /webhook/health - Webhook health check
  */
-router.get('/health', async (_req: Request, res: Response) => {
+router.get('/health', async (_req: Request, res: Response): Promise<void> => {
   try {
     if (!webhookService) {
-      return res.status(503).json({
+      res.status(503).json({
         status: 'error',
         message: 'Webhook service not initialized',
       });
+      return;
     }
 
     const health = webhookService.getHealthStatus();
@@ -151,13 +153,14 @@ router.get('/health', async (_req: Request, res: Response) => {
 /**
  * GET /webhook/stats - Webhook processing statistics
  */
-router.get('/stats', async (_req: Request, res: Response) => {
+router.get('/stats', async (_req: Request, res: Response): Promise<void> => {
   try {
     if (!webhookService) {
-      return res.status(503).json({
+      res.status(503).json({
         status: 'error',
         message: 'Webhook service not initialized',
       });
+      return;
     }
 
     const stats = webhookService.getStats();

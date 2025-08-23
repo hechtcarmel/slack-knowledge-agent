@@ -9,7 +9,6 @@ import { SlackAnthropicLLM } from '@/llm/models/AnthropicLLM.js';
 import {
   LLMProvider,
   ILLMProvider,
-  LLMUsage,
 } from '@/interfaces/services/ILLMService.js';
 
 /**

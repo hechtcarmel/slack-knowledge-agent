@@ -102,20 +102,20 @@ function createTestEvent(): SlackEvent {
   };
 }
 
-/**
- * Create a test threaded event
- */
-function createTestThreadEvent(): SlackEvent {
-  const baseEvent = createTestEvent();
-  return {
-    ...baseEvent,
-    event: {
-      ...baseEvent.event!,
-      text: '<@U987654321> Can you elaborate on the previous discussion?',
-      thread_ts: '1234567890.123456',
-    },
-  };
-}
+// /**
+//  * Create a test threaded event
+//  */
+// function _createTestThreadEvent(): SlackEvent {
+//   const baseEvent = createTestEvent();
+//   return {
+//     ...baseEvent,
+//     event: {
+//       ...baseEvent.event!,
+//       text: '<@U987654321> Can you elaborate on the previous discussion?',
+//       thread_ts: '1234567890.123456',
+//     },
+//   };
+// }
 
 /**
  * Create webhook signature for testing

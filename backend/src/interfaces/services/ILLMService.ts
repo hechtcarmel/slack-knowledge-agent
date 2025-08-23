@@ -121,6 +121,17 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    * Clear conversation memory
    */
   clearMemory(): Promise<void>;
+
+  /**
+   * Get statistics about the LLM service
+   */
+  getStats(): {
+    providers: Record<string, boolean>;
+    currentProvider: LLMProvider;
+    activeQueries: number;
+    totalQueries: number;
+    cachedAgents: number;
+  };
 }
 
 /**

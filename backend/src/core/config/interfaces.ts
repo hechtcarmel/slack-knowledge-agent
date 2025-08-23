@@ -86,9 +86,9 @@ export interface AppConfiguration {
  */
 export interface EnvironmentVariables {
   // Server
-  NODE_ENV: string;
-  PORT: string;
-  REQUEST_TIMEOUT: string;
+  NODE_ENV: 'development' | 'production' | 'test';
+  PORT: number;
+  REQUEST_TIMEOUT: number;
   BODY_LIMIT: string;
 
   // Slack
@@ -100,27 +100,27 @@ export interface EnvironmentVariables {
   // LLM
   OPENAI_API_KEY: string;
   ANTHROPIC_API_KEY?: string;
-  DEFAULT_LLM_PROVIDER: string;
+  DEFAULT_LLM_PROVIDER: 'openai' | 'anthropic';
   LLM_MODEL: string;
-  MAX_CONTEXT_TOKENS: string;
+  MAX_CONTEXT_TOKENS: number;
 
   // Query limits
-  MAX_HISTORY_DAYS: string;
-  DEFAULT_QUERY_LIMIT: string;
-  MAX_QUERY_LIMIT: string;
+  MAX_HISTORY_DAYS: number;
+  DEFAULT_QUERY_LIMIT: number;
+  MAX_QUERY_LIMIT: number;
 
   // Security
-  ENABLE_RATE_LIMIT: string;
-  RATE_LIMIT_WINDOW_MS: string;
-  RATE_LIMIT_MAX_REQUESTS: string;
+  ENABLE_RATE_LIMIT: boolean;
+  RATE_LIMIT_WINDOW_MS: number;
+  RATE_LIMIT_MAX_REQUESTS: number;
 
   // Webhook
-  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: string;
-  WEBHOOK_DUPLICATE_EVENT_TTL_MS: string;
-  WEBHOOK_PROCESSING_TIMEOUT_MS: string;
-  WEBHOOK_ENABLE_THREADING: string;
-  WEBHOOK_ENABLE_DMS: string;
-  WEBHOOK_MAX_RESPONSE_LENGTH: string;
+  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: boolean;
+  WEBHOOK_DUPLICATE_EVENT_TTL_MS: number;
+  WEBHOOK_PROCESSING_TIMEOUT_MS: number;
+  WEBHOOK_ENABLE_THREADING: boolean;
+  WEBHOOK_ENABLE_DMS: boolean;
+  WEBHOOK_MAX_RESPONSE_LENGTH: number;
 }
 
 /**

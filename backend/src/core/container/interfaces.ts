@@ -109,6 +109,15 @@ export interface IContainer {
    * Create a child container with access to parent services
    */
   createChild(): IContainer;
+
+  /**
+   * Get container statistics
+   */
+  getStats(): {
+    servicesRegistered: number;
+    instancesCreated: number;
+    childContainers: number;
+  };
 }
 
 /**

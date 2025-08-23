@@ -134,13 +134,19 @@ export class QueryExecutor implements IInitializableService {
         channels: context.channelIds.length,
       });
 
-      // Create streaming promise
-      const streamPromise = this.streamQueryInternal(context, config, queryId);
+      // Create streaming iterator
+      const streamIterator = this.streamQueryInternal(context, config, queryId);
 
-      // Add to active queries
-      this.activeQueries.set(queryId, streamPromise);
+      // Add a promise to track completion
+      const trackingPromise = (async () => {
+        for await (const _chunk of streamIterator) {
+          // Just consume to track completion
+        }
+      })();
+      
+      this.activeQueries.set(queryId, trackingPromise);
 
-      yield* streamPromise;
+      yield* this.streamQueryInternal(context, config, queryId);
     } catch (error) {
       this.logger.error('Streaming query failed', error as Error, {
         queryId,
@@ -174,7 +180,7 @@ export class QueryExecutor implements IInitializableService {
   private async executeQueryInternal(
     context: LLMContext,
     config: Partial<LLMConfig>,
-    queryId: string
+    _queryId: string
   ): Promise<QueryResult> {
     // Determine provider and model
     const provider =
@@ -213,7 +219,7 @@ export class QueryExecutor implements IInitializableService {
   private async *streamQueryInternal(
     context: LLMContext,
     config: Partial<LLMConfig>,
-    queryId: string
+    _queryId: string
   ): AsyncIterable<StreamChunk> {
     // Determine provider and model
     const provider =
@@ -302,7 +308,7 @@ export class QueryExecutor implements IInitializableService {
 
     return {
       channels: channelsData,
-      totalMessages: context.metadata.totalMessages,
+      totalMessages: context.metadata.total_messages,
       query: context.query,
       availableTools,
     };

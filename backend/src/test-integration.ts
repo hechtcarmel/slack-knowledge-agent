@@ -81,7 +81,7 @@ class IntegrationTester {
       container.registerInstance('test', { value: 'test' });
       const resolved = container.resolve('test');
 
-      if (resolved.value !== 'test') {
+      if ((resolved as any).value !== 'test') {
         throw new Error('Container resolution failed');
       }
 
@@ -95,7 +95,7 @@ class IntegrationTester {
         }
       );
 
-      const service = container.resolve('testService');
+      const service = container.resolve('testService') as any;
       if (service.getValue() !== 'service-value') {
         throw new Error('Service registration failed');
       }

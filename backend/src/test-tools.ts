@@ -114,7 +114,7 @@ async function testTools() {
           validatedParams = tool.schema.parse(testCase.parameters);
           logger.info(`✅ Parameter validation passed`);
         } catch (validationError) {
-          logger.error(`❌ Parameter validation failed:`, validationError);
+          logger.error(`❌ Parameter validation failed:`, validationError as Error);
           failed++;
           continue;
         }
@@ -137,7 +137,7 @@ async function testTools() {
           passed++;
         }
       } catch (error) {
-        logger.error(`❌ Tool test failed:`, error);
+        logger.error(`❌ Tool test failed:`, error as Error);
         failed++;
       }
     }
@@ -162,7 +162,7 @@ async function testTools() {
       process.exit(1);
     }
   } catch (error) {
-    logger.error('❌ Tool testing failed:', error);
+    logger.error('❌ Tool testing failed:', error as Error);
     process.exit(1);
   }
 }

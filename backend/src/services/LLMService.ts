@@ -38,7 +38,7 @@ export class LLMService implements ILLMService {
 
   constructor(
     private slackService: ISlackService,
-    private config: LLMServiceConfig
+    config: LLMServiceConfig
   ) {
     // Create service instances
     this.providerManager = new LLMProviderManager(config.provider);

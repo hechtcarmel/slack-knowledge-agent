@@ -1,4 +1,4 @@
-import { SlackService } from '@/services/SlackService.js';
+import { ISlackService } from '@/interfaces/services/ISlackService.js';
 
 import { createSearchMessagesTool } from './slack/SearchMessages.js';
 import { createGetThreadTool } from './slack/GetThread.js';
@@ -14,15 +14,16 @@ import { createAnalyzeSearchCompletenessTool } from './slack/AnalyzeSearchComple
  * @param slackService The SlackService instance to use for API calls
  * @returns Array of LangChain Tool instances
  */
-export function createSlackTools(slackService: SlackService): any[] {
+export function createSlackTools(slackService: ISlackService): any[] {
+  const slackServiceCompat = slackService as any;
   return [
-    createSearchMessagesTool(slackService),
-    createGetThreadTool(slackService),
-    createGetChannelHistoryTool(slackService),
-    createGetChannelInfoTool(slackService),
-    createListFilesTool(slackService),
-    createGetFileContentTool(slackService),
-    createSearchMoreMessagesTool(slackService),
+    createSearchMessagesTool(slackServiceCompat),
+    createGetThreadTool(slackServiceCompat),
+    createGetChannelHistoryTool(slackServiceCompat),
+    createGetChannelInfoTool(slackServiceCompat),
+    createListFilesTool(slackServiceCompat),
+    createGetFileContentTool(slackServiceCompat),
+    createSearchMoreMessagesTool(slackServiceCompat),
     createAnalyzeSearchCompletenessTool(), // This tool doesn't need slackService
   ];
 }

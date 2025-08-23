@@ -187,14 +187,17 @@ export class EventProcessor implements IEventProcessor {
       return {
         query: mentionText + additionalContext,
         channelIds,
-        channels: [channel],
         messages: [],
         metadata: {
-          webhookEvent: true,
-          originalEventId: event.event_id,
-          userId: eventData.user,
-          isThreadReply: !!eventData.thread_ts,
-          channelType: eventData.channel_type || 'channel',
+          total_messages: 0,
+          channels: [{
+            id: channel.id,
+            name: channel.name,
+            purpose: channel.purpose?.value,
+            topic: channel.topic?.value,
+          }],
+          search_time_ms: 0,
+          token_count: 0,
         },
       };
     } catch (error) {

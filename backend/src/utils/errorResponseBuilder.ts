@@ -196,8 +196,6 @@ export class ErrorResponseBuilder {
     statusCode: number
   ): void {
     const logLevel = statusCode >= 500 ? 'error' : 'warn';
-    const logMethod =
-      logLevel === 'error' ? this.logger.error : this.logger.warn;
 
     const logContext = {
       requestId,

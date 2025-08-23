@@ -10,6 +10,7 @@
 import { createAndStartApplication } from '@/core/app/ApplicationFactory.js';
 import { Logger } from '@/utils/logger.js';
 import { SERVICE_TOKENS } from '@/core/container/interfaces.js';
+import { AppConfig } from '@/core/config/AppConfig.js';
 
 const logger = Logger.create('Bootstrap');
 
@@ -27,7 +28,7 @@ async function main(): Promise<void> {
     // Log successful startup
     const config = application
       .getContainer()
-      .resolve(SERVICE_TOKENS.APP_CONFIG);
+      .resolve(SERVICE_TOKENS.APP_CONFIG) as AppConfig;
     logger.info('✅ Slack Knowledge Agent started successfully', {
       environment: config.getServerConfig().environment,
       port: config.getServerConfig().port,

@@ -220,7 +220,9 @@ export class Container implements IContainer {
     } else {
       // It's a factory function
       const result = (implementation as Factory<T>)(...resolvedDependencies);
-      return result instanceof Promise ? result : result;
+      // Note: Factory functions should not return promises in synchronous resolution
+      // If async behavior is needed, use initialize methods on services
+      return result as T;
     }
   }
 

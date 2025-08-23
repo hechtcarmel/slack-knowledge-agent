@@ -295,7 +295,7 @@ export class AppConfig {
       enableRateLimit: env.ENABLE_RATE_LIMIT,
       rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
       rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
-      trustedProxies: CONFIG_DEFAULTS.security.trustedProxies,
+      trustedProxies: [...CONFIG_DEFAULTS.security.trustedProxies],
     };
 
     const webhookConfig: WebhookConfig = {
@@ -327,7 +327,7 @@ export class AppConfig {
       const origins = process.env.CORS_ORIGINS;
       return origins ? origins.split(',').map(o => o.trim()) : [];
     }
-    return CONFIG_DEFAULTS.server.corsOrigins;
+    return [...CONFIG_DEFAULTS.server.corsOrigins];
   }
 
   /**

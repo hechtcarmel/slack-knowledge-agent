@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+import { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
 import { Logger } from '@/utils/logger.js';
 import { errorResponseBuilder } from '@/utils/errorResponseBuilder.js';
 
@@ -228,7 +228,14 @@ export class ErrorHandlerFactory {
 /**
  * Pre-configured error handlers for common use cases
  */
-export const errorHandlers = {
+export const errorHandlers: {
+  production: ErrorRequestHandler;
+  development: ErrorRequestHandler;
+  test: ErrorRequestHandler;
+  notFound: RequestHandler;
+  validation: ErrorRequestHandler;
+  rateLimit: ErrorRequestHandler;
+} = {
   /**
    * Standard error handler for production
    */
