@@ -26,6 +26,10 @@ export interface ChatMessage {
     intermediateSteps?: any[];
     toolCalls?: number;
     relevantPermalinks?: string[];
+    permalinkReferences?: Array<{
+      url: string;
+      description: string;
+    }>;
     executionTrace?: {
       query_time: number;
       channels_searched: Array<{

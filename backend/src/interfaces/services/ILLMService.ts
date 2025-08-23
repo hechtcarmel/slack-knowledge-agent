@@ -29,6 +29,14 @@ export interface LLMUsage {
 }
 
 /**
+ * Permalink with description
+ */
+export interface PermalinkReference {
+  url: string;
+  description: string;
+}
+
+/**
  * Query result from LLM service
  */
 export interface QueryResult {
@@ -39,6 +47,7 @@ export interface QueryResult {
   model: string;
   intermediateSteps?: any[];
   relevantPermalinks?: string[];
+  permalinkReferences?: PermalinkReference[];
 }
 
 /**

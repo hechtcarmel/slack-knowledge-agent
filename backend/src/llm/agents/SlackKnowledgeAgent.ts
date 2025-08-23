@@ -10,7 +10,12 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Logger } from '@/utils/logger.js';
 import { SlackConversationMemory } from '../memory/SlackMemory.js';
 import { SLACK_KNOWLEDGE_SYSTEM_PROMPT } from '../prompts/systemPrompts.js';
-import { extractPermalinksFromSteps, filterRelevantPermalinks } from '../schemas/structuredOutput.js';
+import { 
+  extractPermalinksFromSteps, 
+  filterRelevantPermalinks,
+  extractPermalinksWithContext,
+  createPermalinkReferences 
+} from '../schemas/structuredOutput.js';
 
 export interface AgentConfig {
   maxIterations?: number;
@@ -25,6 +30,7 @@ export interface QueryResult {
   intermediateSteps?: any[];
   usage?: any;
   relevantPermalinks?: string[];
+  permalinkReferences?: Array<{ url: string; description: string }>;
 }
 
 export class SlackKnowledgeAgent {
@@ -131,6 +137,10 @@ export class SlackKnowledgeAgent {
       // Extract permalinks from intermediate steps
       const allPermalinks = extractPermalinksFromSteps(result.intermediateSteps || []);
       const relevantPermalinks = filterRelevantPermalinks(allPermalinks, 3);
+      
+      // Extract permalinks with full context for descriptions
+      const permalinksWithContext = extractPermalinksWithContext(result.intermediateSteps || []);
+      const permalinkReferences = createPermalinkReferences(permalinksWithContext);
 
       this.logger.info('Query processed successfully', {
         outputLength: result.output?.length || 0,
@@ -138,6 +148,7 @@ export class SlackKnowledgeAgent {
         executionTime,
         hasMemory: !!this.memory,
         permalinkCount: relevantPermalinks.length,
+        permalinkReferencesCount: permalinkReferences.length,
       });
 
       return {
@@ -145,6 +156,7 @@ export class SlackKnowledgeAgent {
         intermediateSteps: result.intermediateSteps,
         usage: result.usage, // May be undefined
         relevantPermalinks,
+        permalinkReferences,
       };
     } catch (error) {
       this.logger.error('Agent query failed', error as Error, {

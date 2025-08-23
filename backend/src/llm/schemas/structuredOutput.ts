@@ -30,6 +30,14 @@ export const StructuredLLMOutputSchema = z.object({
 
 export type StructuredLLMOutput = z.infer<typeof StructuredLLMOutputSchema>;
 
+export interface PermalinkWithContext {
+  url: string;
+  text: string;
+  user: string;
+  channel?: string;
+  timestamp?: string;
+}
+
 /**
  * Parse intermediate steps to extract permalinks from tool calls
  */
@@ -87,6 +95,74 @@ export function extractPermalinksFromSteps(
   }
 
   return permalinks;
+}
+
+/**
+ * Extract permalinks with context (message text, user, etc.)
+ */
+export function extractPermalinksWithContext(
+  intermediateSteps: any[]
+): PermalinkWithContext[] {
+  const permalinks: PermalinkWithContext[] = [];
+  const seenUrls = new Set<string>();
+
+  if (!intermediateSteps || !Array.isArray(intermediateSteps)) {
+    return permalinks;
+  }
+
+  for (const step of intermediateSteps) {
+    if (step?.observation) {
+      try {
+        const parsed =
+          typeof step.observation === 'string'
+            ? JSON.parse(step.observation)
+            : step.observation;
+
+        if (parsed?.messages && Array.isArray(parsed.messages)) {
+          for (const msg of parsed.messages) {
+            if (msg.permalink && !seenUrls.has(msg.permalink)) {
+              // Extract first 50 chars of message for context
+              const textPreview = msg.text ? 
+                msg.text.substring(0, 50) + (msg.text.length > 50 ? '...' : '') : 
+                'Message';
+              
+              permalinks.push({
+                url: msg.permalink,
+                text: textPreview,
+                user: msg.user || 'Unknown',
+                channel: msg.channel,
+                timestamp: msg.ts
+              });
+              seenUrls.add(msg.permalink);
+            }
+          }
+        }
+      } catch (e) {
+        // Silent fail for non-JSON
+      }
+    }
+  }
+
+  return permalinks;
+}
+
+/**
+ * Create permalink references with descriptions
+ */
+export function createPermalinkReferences(
+  permalinksWithContext: PermalinkWithContext[]
+): Array<{ url: string; description: string }> {
+  return permalinksWithContext.slice(0, 3).map((p) => {
+    // Create a concise description from the context
+    const description = p.text.length > 30 
+      ? `${p.user}: "${p.text.substring(0, 30)}..."`
+      : `${p.user}: "${p.text}"`;
+    
+    return {
+      url: p.url,
+      description
+    };
+  });
 }
 
 /**

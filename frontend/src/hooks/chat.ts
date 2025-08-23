@@ -36,6 +36,7 @@ class ChatApiClient {
         model: data.data.metadata?.model,
         processingTime: data.data.metadata?.response_time_ms,
         relevantPermalinks: data.data.relevantPermalinks,
+        permalinkReferences: data.data.permalinkReferences,
         intermediateSteps: data.data.metadata?.intermediate_steps,
         executionTrace: data.data.metadata?.execution_trace,
       },

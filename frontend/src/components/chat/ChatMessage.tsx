@@ -142,8 +142,8 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
           </div>
         </div>
 
-        {/* References Section - Only for assistant messages with permalinks */}
-        {isAssistant && message.metadata?.relevantPermalinks && message.metadata.relevantPermalinks.length > 0 && (
+        {/* References Section - Use permalinkReferences if available, fall back to relevantPermalinks */}
+        {isAssistant && (message.metadata?.permalinkReferences?.length > 0 || message.metadata?.relevantPermalinks?.length > 0) && (
           <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex items-center gap-1.5">
@@ -152,38 +152,57 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
               </div>
               <span className="text-xs text-muted-foreground">•</span>
               <span className="text-xs text-muted-foreground">
-                {message.metadata.relevantPermalinks.length} source{message.metadata.relevantPermalinks.length > 1 ? 's' : ''}
+                {(message.metadata.permalinkReferences || message.metadata.relevantPermalinks || []).length} source{((message.metadata.permalinkReferences || message.metadata.relevantPermalinks || []).length) > 1 ? 's' : ''}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {message.metadata.relevantPermalinks.map((permalink, index) => {
-                // Extract channel from permalink if possible
-                const match = permalink.match(/\/archives\/([^/]+)\/(p\d+)/);
-                const channelId = match?.[1];
-                
-                return (
+              {message.metadata.permalinkReferences ? (
+                // Use permalinkReferences with descriptions
+                message.metadata.permalinkReferences.map((ref, index) => (
                   <a
                     key={index}
-                    href={permalink}
+                    href={ref.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-primary/10 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-primary/10 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group max-w-xs"
                     title="Open in Slack"
                   >
-                    <ExternalLink className="h-3 w-3 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-                    <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">
-                      {channelId ? (
-                        <>
-                          <Hash className="inline h-2.5 w-2.5 mr-0.5 opacity-60" />
-                          {channelId}
-                        </>
-                      ) : (
-                        `Source ${index + 1}`
-                      )}
+                    <ExternalLink className="h-3 w-3 text-muted-foreground/70 group-hover:text-primary transition-colors flex-shrink-0" />
+                    <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors truncate">
+                      {ref.description}
                     </span>
                   </a>
-                );
-              })}
+                ))
+              ) : (
+                // Fallback to relevantPermalinks with channel IDs
+                message.metadata.relevantPermalinks?.map((permalink, index) => {
+                  const match = permalink.match(/\/archives\/([^/]+)\/(p\d+)/);
+                  const channelId = match?.[1];
+                  
+                  return (
+                    <a
+                      key={index}
+                      href={permalink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-primary/10 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
+                      title="Open in Slack"
+                    >
+                      <ExternalLink className="h-3 w-3 text-muted-foreground/70 group-hover:text-primary transition-colors" />
+                      <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">
+                        {channelId ? (
+                          <>
+                            <Hash className="inline h-2.5 w-2.5 mr-0.5 opacity-60" />
+                            {channelId}
+                          </>
+                        ) : (
+                          `Source ${index + 1}`
+                        )}
+                      </span>
+                    </a>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
