@@ -24,7 +24,7 @@ async function checkSlackStatus() {
 
   if (!slackService) {
     return {
-      status: 'unavailable' as const,
+      status: 'disconnected' as const,
       lastCheck,
       error: 'Slack service not initialized',
     };
@@ -103,7 +103,7 @@ async function checkLLMStatus() {
 
   if (!llmService) {
     return {
-      status: 'unavailable' as const,
+      status: 'disconnected' as const,
       lastCheck,
       error: 'LLM service not initialized',
     };
@@ -116,9 +116,9 @@ async function checkLLMStatus() {
 
     return {
       status:
-        health.status === 'healthy'
+        health.status === 'healthy' || health.status === 'degraded'
           ? ('connected' as const)
-          : ('degraded' as const),
+          : ('disconnected' as const),
       lastCheck,
       currentProvider: stats.currentProvider,
       availableProviders: providers,
@@ -165,16 +165,6 @@ router.get(
         services: {
           slack: slackStatus,
           llm: llmStatus,
-        },
-        system: {
-          memory: {
-            used: process.memoryUsage().heapUsed,
-            total: process.memoryUsage().heapTotal,
-            external: process.memoryUsage().external,
-          },
-          cpu: {
-            usage: process.cpuUsage(),
-          },
         },
       };
 
