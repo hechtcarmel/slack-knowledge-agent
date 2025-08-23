@@ -14,7 +14,6 @@ export default {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/**/*.test.ts',
-    '!src/server.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
