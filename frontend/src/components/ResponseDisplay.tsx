@@ -15,8 +15,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronRight,
-  Activity,
-  Link2
+  Activity
 } from 'lucide-react';
 import { formatTimestamp, cn } from '@/lib/utils';
 
