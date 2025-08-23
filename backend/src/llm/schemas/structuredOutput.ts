@@ -153,10 +153,10 @@ export function createPermalinkReferences(
   permalinksWithContext: PermalinkWithContext[]
 ): Array<{ url: string; description: string }> {
   return permalinksWithContext.slice(0, 3).map((p) => {
-    // Create a concise description from the context
-    const description = p.text.length > 30 
-      ? `${p.user}: "${p.text.substring(0, 30)}..."`
-      : `${p.user}: "${p.text}"`;
+    // Create a concise description from the message text only
+    const description = p.text.length > 40 
+      ? `"${p.text.substring(0, 40)}..."`
+      : `"${p.text}"`;
     
     return {
       url: p.url,

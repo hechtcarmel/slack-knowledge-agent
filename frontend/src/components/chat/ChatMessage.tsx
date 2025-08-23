@@ -15,7 +15,6 @@ import {
   Clock,
   Zap,
   Info,
-  Link2,
 } from 'lucide-react';
 import { cn, formatTimestamp } from '@/lib/utils';
 import {
@@ -143,7 +142,9 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
         </div>
 
         {/* References Section - Use permalinkReferences if available, fall back to relevantPermalinks */}
-        {isAssistant && (message.metadata?.permalinkReferences?.length > 0 || message.metadata?.relevantPermalinks?.length > 0) && (
+        {isAssistant && message.metadata && 
+         ((message.metadata.permalinkReferences && message.metadata.permalinkReferences.length > 0) || 
+          (message.metadata.relevantPermalinks && message.metadata.relevantPermalinks.length > 0)) && (
           <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex items-center gap-1.5">
@@ -152,11 +153,11 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
               </div>
               <span className="text-xs text-muted-foreground">•</span>
               <span className="text-xs text-muted-foreground">
-                {(message.metadata.permalinkReferences || message.metadata.relevantPermalinks || []).length} source{((message.metadata.permalinkReferences || message.metadata.relevantPermalinks || []).length) > 1 ? 's' : ''}
+                {(message.metadata?.permalinkReferences?.length || message.metadata?.relevantPermalinks?.length || 0)} source{((message.metadata?.permalinkReferences?.length || message.metadata?.relevantPermalinks?.length || 0) > 1) ? 's' : ''}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {message.metadata.permalinkReferences ? (
+              {message.metadata?.permalinkReferences ? (
                 // Use permalinkReferences with descriptions
                 message.metadata.permalinkReferences.map((ref, index) => (
                   <a
@@ -175,7 +176,7 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
                 ))
               ) : (
                 // Fallback to relevantPermalinks with channel IDs
-                message.metadata.relevantPermalinks?.map((permalink, index) => {
+                message.metadata?.relevantPermalinks?.map((permalink, index) => {
                   const match = permalink.match(/\/archives\/([^/]+)\/(p\d+)/);
                   const channelId = match?.[1];
                   
