@@ -143,63 +143,66 @@ export function ChainOfThought({ intermediateSteps, className }: ChainOfThoughtP
                 )}>
                   {/* Step Header */}
                   <div className="p-4">
-                    <button
-                      onClick={() => toggleStep(index)}
-                      className="w-full text-left focus:outline-none focus:ring-2 focus:ring-blue-300 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="p-2 bg-white rounded-lg shadow-sm border">
-                            {getToolIcon(toolName)}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-1">
-                              {formatToolName(toolName)}
-                            </h4>
-                            <p className="text-sm text-gray-600 line-clamp-1">
-                              {typeof toolInput === 'object' && toolInput !== null
-                                ? Object.entries(toolInput)
-                                    .slice(0, 2)
-                                    .map(([key, value]) => `${key}: ${String(value).substring(0, 30)}`)
-                                    .join(', ')
-                                : String(toolInput).substring(0, 60)
-                              }
-                              {Object.keys(toolInput).length > 2 && '...'}
-                            </p>
-                          </div>
+                    <div className="flex items-center justify-between">
+                      <div 
+                        className="flex items-center gap-3 flex-1 cursor-pointer hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded-lg p-2 -m-2"
+                        onClick={() => toggleStep(index)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleStep(index);
+                          }
+                        }}
+                      >
+                        <div className="p-2 bg-white rounded-lg shadow-sm border">
+                          {getToolIcon(toolName)}
                         </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          {reasoning && (
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                              <Brain className="h-3 w-3 mr-1" />
-                              Reasoning
-                            </Badge>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-1">
+                            {formatToolName(toolName)}
+                          </h4>
+                          <p className="text-sm text-gray-600 line-clamp-1">
+                            {typeof toolInput === 'object' && toolInput !== null
+                              ? Object.entries(toolInput)
+                                  .slice(0, 2)
+                                  .map(([key, value]) => `${key}: ${String(value).substring(0, 30)}`)
+                                  .join(', ')
+                              : String(toolInput).substring(0, 60)
+                            }
+                            {Object.keys(toolInput).length > 2 && '...'}
+                          </p>
+                        </div>
+                        <div className="text-gray-400 ml-2">
+                          {isExpanded ? (
+                            <ChevronDown className="h-5 w-5" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5" />
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyStepData(step, index);
-                            }}
-                            className="p-2 hover:bg-white/50"
-                          >
-                            {copiedStep === index ? (
-                              <CheckCheck className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Copy className="h-4 w-4 text-gray-500" />
-                            )}
-                          </Button>
-                          <div className="text-gray-400">
-                            {isExpanded ? (
-                              <ChevronDown className="h-5 w-5" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5" />
-                            )}
-                          </div>
                         </div>
                       </div>
-                    </button>
+                      <div className="flex items-center gap-2 ml-4">
+                        {reasoning && (
+                          <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                            <Brain className="h-3 w-3 mr-1" />
+                            Reasoning
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyStepData(step, index)}
+                          className="p-2 hover:bg-white/50"
+                        >
+                          {copiedStep === index ? (
+                            <CheckCheck className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Expanded Content */}

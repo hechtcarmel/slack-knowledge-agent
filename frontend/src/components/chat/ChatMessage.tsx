@@ -302,18 +302,7 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
                     </div>
                   )}
 
-                  {/* Execution Trace */}
-                  {message.metadata.executionTrace && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">Execution Trace</h3>
-                      <div className="bg-muted p-3 rounded-md text-sm space-y-2">
-                        <div>Query Time: {message.metadata.executionTrace.query_time}ms</div>
-                        <div>Channels Searched: {message.metadata.executionTrace.channels_searched.map((c: any) => c.name).join(', ')}</div>
-                        <div>Total Messages: {message.metadata.executionTrace.context.metadata.total_messages}</div>
-                        <div>Search Time: {message.metadata.executionTrace.context.metadata.search_time_ms}ms</div>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </DialogContent>
             </Dialog>
