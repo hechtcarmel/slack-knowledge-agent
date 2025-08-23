@@ -25,6 +25,7 @@ export interface ChatMessage {
     model?: string;
     intermediateSteps?: any[];
     toolCalls?: number;
+    relevantPermalinks?: string[];
     executionTrace?: {
       query_time: number;
       channels_searched: Array<{

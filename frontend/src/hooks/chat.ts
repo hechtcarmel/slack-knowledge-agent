@@ -35,6 +35,9 @@ class ChatApiClient {
         llmProvider: data.data.metadata?.provider,
         model: data.data.metadata?.model,
         processingTime: data.data.metadata?.response_time_ms,
+        relevantPermalinks: data.data.relevantPermalinks,
+        intermediateSteps: data.data.metadata?.intermediate_steps,
+        executionTrace: data.data.metadata?.execution_trace,
       },
     };
 

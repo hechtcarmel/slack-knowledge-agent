@@ -15,6 +15,7 @@ import {
   Clock,
   Zap,
   Info,
+  Link2,
 } from 'lucide-react';
 import { cn, formatTimestamp } from '@/lib/utils';
 import {
@@ -141,6 +142,52 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
           </div>
         </div>
 
+        {/* References Section - Only for assistant messages with permalinks */}
+        {isAssistant && message.metadata?.relevantPermalinks && message.metadata.relevantPermalinks.length > 0 && (
+          <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/50">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">References</span>
+              </div>
+              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-xs text-muted-foreground">
+                {message.metadata.relevantPermalinks.length} source{message.metadata.relevantPermalinks.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {message.metadata.relevantPermalinks.map((permalink, index) => {
+                // Extract channel from permalink if possible
+                const match = permalink.match(/\/archives\/([^/]+)\/(p\d+)/);
+                const channelId = match?.[1];
+                
+                return (
+                  <a
+                    key={index}
+                    href={permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm border border-border/30 hover:bg-primary/10 hover:border-primary/30 hover:shadow-sm transition-all duration-200 group"
+                    title="Open in Slack"
+                  >
+                    <ExternalLink className="h-3 w-3 text-muted-foreground/70 group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">
+                      {channelId ? (
+                        <>
+                          <Hash className="inline h-2.5 w-2.5 mr-0.5 opacity-60" />
+                          {channelId}
+                        </>
+                      ) : (
+                        `Source ${index + 1}`
+                      )}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Message Footer */}
         <div className={cn(
           'flex items-center gap-2 mt-1 text-xs text-muted-foreground',
@@ -157,9 +204,6 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
               <span>{(message.metadata.processingTime / 1000).toFixed(1)}s</span>
             </>
           )}
-
-
-
         </div>
 
         {/* Metadata Dialog Button for assistant messages */}
