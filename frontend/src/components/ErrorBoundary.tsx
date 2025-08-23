@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 
     // In production, you might want to log to an error reporting service
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Example: logErrorToService(error, errorInfo);
     }
   }
@@ -90,7 +90,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Error details for development */}
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <div className="space-y-2">
                   <details className="text-sm">
                     <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
@@ -181,7 +181,7 @@ export function useErrorHandler() {
     console.error('Manual error report:', error, errorInfo);
     
     // In production, log to error reporting service
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Example: logErrorToService(error, errorInfo);
     }
     
