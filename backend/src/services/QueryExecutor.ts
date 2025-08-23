@@ -210,6 +210,7 @@ export class QueryExecutor implements IInitializableService {
       provider,
       model,
       intermediateSteps: result.intermediateSteps,
+      relevantPermalinks: result.relevantPermalinks,
     };
   }
 

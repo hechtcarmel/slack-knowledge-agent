@@ -136,6 +136,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
         status: 'success',
         data: {
           answer: result.response,
+          relevantPermalinks: result.relevantPermalinks || [],
           metadata: {
             provider: result.provider,
             model: result.model,

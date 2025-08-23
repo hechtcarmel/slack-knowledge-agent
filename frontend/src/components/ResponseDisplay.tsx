@@ -15,7 +15,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronRight,
-  Activity
+  Activity,
+  Link2
 } from 'lucide-react';
 import { formatTimestamp, cn } from '@/lib/utils';
 
@@ -122,7 +123,64 @@ export function ResponseDisplay({ response, query }: ResponseDisplayProps) {
         </CardContent>
       </Card>
 
-
+      {/* Relevant Permalinks Card */}
+      {response.relevantPermalinks && response.relevantPermalinks.length > 0 && (
+        <Card className="border-primary/20 bg-gradient-to-br from-card to-primary-light/10 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Link2 className="h-5 w-5 text-primary" />
+              Relevant Messages ({response.relevantPermalinks.length})
+            </CardTitle>
+            <CardDescription>
+              Direct links to the most relevant Slack messages that informed this answer
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {response.relevantPermalinks.map((permalink, index) => {
+                // Extract channel and timestamp from permalink if possible
+                const match = permalink.match(/\/archives\/([^/]+)\/(p\d+)/);
+                const channelId = match?.[1];
+                
+                return (
+                  <a
+                    key={index}
+                    href={permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-all hover:scale-[1.01] group"
+                  >
+                    <div className="flex-shrink-0">
+                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">
+                          Message {index + 1}
+                        </Badge>
+                        {channelId && (
+                          <Badge variant="outline" className="text-xs flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            {channelId}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {permalink}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                        Open in Slack →
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Advanced Metadata Card */}
       {(response.metadata.intermediateSteps && response.metadata.intermediateSteps.length > 0) || response.metadata.executionTrace ? (

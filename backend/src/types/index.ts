@@ -6,6 +6,7 @@ export interface Message {
   ts: string;
   channel: string;
   thread_ts?: string;
+  permalink?: string;
 }
 
 export interface Thread {

@@ -66,7 +66,21 @@ export function createGetThreadTool(
           })
           .join('\n\n');
 
-        return `Thread in #${channel.name} with ${threadMessages.messages.length} messages:\n\n${formattedMessages}`;
+        // Return structured data with permalinks
+        const response = {
+          summary: `Thread in #${channel.name} with ${threadMessages.messages.length} messages:\n\n${formattedMessages}`,
+          messages: threadMessages.messages.map((msg: any) => ({
+            user: msg.user,
+            text: msg.text,
+            ts: msg.ts,
+            channel: msg.channel,
+            thread_ts: msg.thread_ts,
+            permalink: msg.permalink
+          })),
+          totalCount: threadMessages.messages.length
+        };
+
+        return JSON.stringify(response);
       } catch (error) {
         const errorMessage = `Failed to get thread: ${(error as Error).message}`;
         logger.error('Thread retrieval failed', error as Error, {

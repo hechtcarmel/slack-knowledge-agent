@@ -103,6 +103,7 @@ export interface ExecutionTrace {
 
 export interface QueryResponse {
   response: string;
+  relevantPermalinks?: string[];
   metadata: {
     channels: string[];
     messagesFound: number;

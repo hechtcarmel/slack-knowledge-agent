@@ -129,7 +129,7 @@ export function createSearchMessagesTool(
           maxPages: args.max_pages,
         });
 
-        // Return plain text for ReAct agent compatibility
+        // Return structured data that includes permalinks
         if (result.messages.length === 0) {
           const paginationNote = args.auto_paginate
             ? ' (searched multiple pages automatically)'
@@ -137,9 +137,12 @@ export function createSearchMessagesTool(
           return `No messages found matching "${args.query}" in the specified channels${paginationNote}.`;
         }
 
-        // Format messages as readable text
+        const totalCount = result.messages.length;
+        const showingCount = Math.min(10, totalCount);
+
+        // Format messages as readable text for display
         const formattedMessages = result.messages
-          .slice(0, 10) // Limit to first 10 for readability
+          .slice(0, showingCount)
           .map((msg, index) => {
             const userDisplay = msg.user || 'Unknown';
             const timeDisplay = new Date(
@@ -148,9 +151,6 @@ export function createSearchMessagesTool(
             return `${index + 1}. [${timeDisplay}] ${userDisplay}: ${msg.text}`;
           })
           .join('\n\n');
-
-        const totalCount = result.messages.length;
-        const showingCount = Math.min(10, totalCount);
 
         // Add pagination information to the response
         let paginationInfo = '';
@@ -162,9 +162,22 @@ export function createSearchMessagesTool(
           paginationInfo = ` (single page - use auto_paginate=true for comprehensive search)`;
         }
 
-        // Note: We can't easily determine if there are more pages available from this level
-        // The SlackService would need to be updated to return pagination metadata
-        return `Found ${totalCount} messages matching "${args.query}"${paginationInfo}${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n\n${formattedMessages}`;
+        // Return both formatted text and structured data with permalinks
+        const response = {
+          summary: `Found ${totalCount} messages matching "${args.query}"${paginationInfo}${totalCount > showingCount ? ` (showing first ${showingCount})` : ''}:\n\n${formattedMessages}`,
+          messages: result.messages.slice(0, showingCount).map(msg => ({
+            user: msg.user,
+            text: msg.text,
+            ts: msg.ts,
+            channel: msg.channel,
+            permalink: msg.permalink
+          })),
+          totalCount,
+          showingCount
+        };
+
+        // Return as JSON string so it can be parsed by extractPermalinksFromSteps
+        return JSON.stringify(response);
       } catch (error) {
         const errorMessage = `Error searching messages: ${(error as Error).message}`;
         logger.error('Message search failed', error as Error, {

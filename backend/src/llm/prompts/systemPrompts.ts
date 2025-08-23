@@ -45,6 +45,13 @@ When exploring a topic:
 - **Context Preservation**: Include relevant background for understanding
 - **Accuracy Verification**: Cross-reference important claims
 - **Completeness Check**: Ensure all aspects of query are addressed
+- **Permalink Tracking**: Track the most relevant message permalinks (1-3 max) that directly answer the query
+
+### Tool Output Handling
+When tools return JSON responses with 'summary' and 'messages' fields:
+- Display the 'summary' field content for readability
+- The 'messages' field contains structured data with permalinks that will be automatically extracted
+- Focus on finding the most directly relevant messages for the user's query
 
 ### Information Synthesis
 - Quote directly when providing specific information

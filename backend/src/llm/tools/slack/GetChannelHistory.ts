@@ -49,7 +49,7 @@ export function createGetChannelHistoryTool(
           limit: args.limit,
         });
 
-        // Return plain text for ReAct agent compatibility
+        // Return structured data with permalinks
         if (result.messages.length === 0) {
           return `No messages found in channel ${result.metadata.channelName || args.channel_id}.`;
         }
@@ -67,7 +67,22 @@ export function createGetChannelHistoryTool(
           .reverse() // Show most recent first
           .join('\n\n');
 
-        return `Found ${result.messages.length} messages in channel ${result.metadata.channelName || args.channel_id}:\n\n${formattedMessages}`;
+        // Return structured data with permalinks
+        const response = {
+          summary: `Found ${result.messages.length} messages in channel ${result.metadata.channelName || args.channel_id}:\n\n${formattedMessages}`,
+          messages: result.messages.map(msg => ({
+            user: msg.user,
+            text: msg.text,
+            ts: msg.ts,
+            channel: msg.channel,
+            thread_ts: msg.thread_ts,
+            permalink: msg.permalink
+          })),
+          totalCount: result.messages.length,
+          channelName: result.metadata.channelName
+        };
+
+        return JSON.stringify(response);
       } catch (error) {
         const errorMessage = `Failed to get channel history: ${(error as Error).message}`;
         logger.error('Channel history retrieval failed', error as Error, {

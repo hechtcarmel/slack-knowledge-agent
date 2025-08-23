@@ -93,6 +93,7 @@ class ApiClient {
       status: 'success';
       data: {
         answer: string;
+        relevantPermalinks?: string[];
         metadata: {
           provider: string;
           model: string;
@@ -116,6 +117,7 @@ class ApiClient {
     // Transform backend response to frontend expected format
     return {
       response: response.data.answer,
+      relevantPermalinks: response.data.relevantPermalinks,
       metadata: {
         channels: query.channels,
         messagesFound: response.data.metadata.tool_calls || 0,

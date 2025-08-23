@@ -10,6 +10,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Logger } from '@/utils/logger.js';
 import { SlackConversationMemory } from '../memory/SlackMemory.js';
 import { SLACK_KNOWLEDGE_SYSTEM_PROMPT } from '../prompts/systemPrompts.js';
+import { extractPermalinksFromSteps, filterRelevantPermalinks } from '../schemas/structuredOutput.js';
 
 export interface AgentConfig {
   maxIterations?: number;
@@ -23,6 +24,7 @@ export interface QueryResult {
   output: string;
   intermediateSteps?: any[];
   usage?: any;
+  relevantPermalinks?: string[];
 }
 
 export class SlackKnowledgeAgent {
@@ -126,17 +128,23 @@ export class SlackKnowledgeAgent {
 
       const executionTime = Date.now() - startTime;
 
+      // Extract permalinks from intermediate steps
+      const allPermalinks = extractPermalinksFromSteps(result.intermediateSteps || []);
+      const relevantPermalinks = filterRelevantPermalinks(allPermalinks, 3);
+
       this.logger.info('Query processed successfully', {
         outputLength: result.output?.length || 0,
         intermediateStepsCount: result.intermediateSteps?.length || 0,
         executionTime,
         hasMemory: !!this.memory,
+        permalinkCount: relevantPermalinks.length,
       });
 
       return {
         output: result.output || '',
         intermediateSteps: result.intermediateSteps,
         usage: result.usage, // May be undefined
+        relevantPermalinks,
       };
     } catch (error) {
       this.logger.error('Agent query failed', error as Error, {

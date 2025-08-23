@@ -35,6 +35,7 @@ export class SlackApiClient implements ISlackApiClient {
   private userClient?: WebClient;
   private logger = Logger.create('SlackApiClient');
   private retryManager: RetryManager;
+  private teamInfo?: { team: string; teamId: string; url?: string };
 
   constructor(config: SlackApiClientConfig) {
     this.client = new WebClient(config.botToken);
@@ -77,6 +78,13 @@ export class SlackApiClient implements ISlackApiClient {
         if (!result.ok) {
           throw new SlackError('Authentication failed', 'AUTH_FAILED', result);
         }
+
+        // Store team info for permalink construction
+        this.teamInfo = {
+          team: result.team as string,
+          teamId: result.team_id as string,
+          url: result.url as string,
+        };
 
         this.logger.info('Slack connection test successful', {
           botId: result.bot_id,
@@ -652,12 +660,33 @@ export class SlackApiClient implements ISlackApiClient {
    * Map Slack API message object to our Message type
    */
   private mapMessageFromApi(msg: any, channelId: string): Message {
+    // Extract or construct permalink
+    let permalink: string | undefined;
+    
+    // If the message has a permalink field (from search API)
+    if (msg.permalink) {
+      permalink = msg.permalink;
+    } 
+    // Otherwise, try to construct it if we have team info
+    else if (this.teamInfo?.url && channelId && msg.ts) {
+      const baseUrl = this.teamInfo.url.replace(/\/$/, '');
+      const messageId = 'p' + msg.ts.replace('.', '');
+      permalink = `${baseUrl}/archives/${channelId}/${messageId}`;
+      
+      // If it's a thread reply, modify the permalink format
+      if (msg.thread_ts && msg.thread_ts !== msg.ts) {
+        const threadId = 'p' + msg.thread_ts.replace('.', '');
+        permalink = `${baseUrl}/archives/${channelId}/${threadId}?thread_ts=${msg.thread_ts}&cid=${channelId}`;
+      }
+    }
+
     return {
       user: msg.user || msg.bot_id || 'unknown',
       text: msg.text || '',
       ts: msg.ts,
       channel: channelId,
       thread_ts: msg.thread_ts,
+      permalink,
     };
   }
 

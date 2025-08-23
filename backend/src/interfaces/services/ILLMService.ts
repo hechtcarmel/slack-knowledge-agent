@@ -38,6 +38,7 @@ export interface QueryResult {
   provider: string;
   model: string;
   intermediateSteps?: any[];
+  relevantPermalinks?: string[];
 }
 
 /**
