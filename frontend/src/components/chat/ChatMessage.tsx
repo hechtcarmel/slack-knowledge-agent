@@ -142,6 +142,105 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
           </div>
         </div>
 
+        {/* Metadata Footer - Date, Time, and Flow Details */}
+        {isAssistant && message.metadata && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            {/* Date and Time */}
+            <div className="flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              <span>{formatTimestamp(message.timestamp)}</span>
+              {message.metadata.processingTime && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" />
+                    {(message.metadata.processingTime / 1000).toFixed(1)}s
+                  </span>
+                </>
+              )}
+            </div>
+            
+            {/* View Flow Details Button */}
+            <div className="ml-auto">
+              <Dialog open={showMetadataDialog} onOpenChange={setShowMetadataDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <Info className="h-3 w-3 mr-1" />
+                    View Flow Details
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Message Flow Details</DialogTitle>
+                    <DialogDescription>
+                      Detailed information about how this response was generated
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6">
+                    {/* Query Flow Overview */}
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-sm">Query Flow Overview</h3>
+                      <div className="bg-blue-50 border border-blue-200 p-4 rounded-md text-sm space-y-2">
+                        <div className="font-medium text-blue-900">Initial Request</div>
+                        <div className="text-blue-800">Provider: {message.metadata.llmProvider}</div>
+                        {message.metadata.model && (
+                          <div className="text-blue-800">Model: {message.metadata.model}</div>
+                        )}
+                        {message.metadata.processingTime && (
+                          <div className="text-blue-800">Total Processing Time: {(message.metadata.processingTime / 1000).toFixed(1)}s</div>
+                        )}
+
+                      </div>
+                    </div>
+
+                    {/* Chain of Thought */}
+                    {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
+                      <ChainOfThought 
+                        intermediateSteps={message.metadata.intermediateSteps}
+                        className="mt-4"
+                      />
+                    )}
+
+                    {/* Sources */}
+                    {message.metadata.sources && message.metadata.sources.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-sm">Sources ({message.metadata.sources.length})</h3>
+                        <div className="space-y-2">
+                          {message.metadata.sources.map((source, index) => (
+                            <div key={`${source.id}-${index}`} className="border rounded-md p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant={source.type === 'message' ? 'default' : 'secondary'} className="text-xs">
+                                  {source.type}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                  <Hash className="h-2 w-2" />
+                                  {source.channelId}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatTimestamp(source.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground italic">
+                                "{source.snippet}"
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        )}
+
         {/* References Section - Use permalinkReferences if available, fall back to relevantPermalinks */}
         {isAssistant && message.metadata && 
          ((message.metadata.permalinkReferences && message.metadata.permalinkReferences.length > 0) || 
@@ -209,105 +308,14 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
           </div>
         )}
 
-        {/* Message Footer */}
-        <div className={cn(
-          'flex items-center gap-2 mt-1 text-xs text-muted-foreground',
-          isUser ? 'justify-end' : 'justify-start'
-        )}>
-          <Clock className="h-3 w-3" />
-          <span>{formatTimestamp(message.timestamp)}</span>
-          
-          {/* Show processing time for assistant messages */}
-          {isAssistant && message.metadata?.processingTime && (
-            <>
-              <span>•</span>
-              <Zap className="h-3 w-3" />
-              <span>{(message.metadata.processingTime / 1000).toFixed(1)}s</span>
-            </>
-          )}
-        </div>
-
-        {/* Metadata Dialog Button for assistant messages */}
-        {isAssistant && message.metadata && (
-          <div className="mt-1">
-            <Dialog open={showMetadataDialog} onOpenChange={setShowMetadataDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <Info className="h-4 w-4 mr-1" />
-                  View Flow Details
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Message Flow Details</DialogTitle>
-                  <DialogDescription>
-                    Detailed information about how this response was generated
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6">
-                  {/* Query Flow Overview */}
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm">Query Flow Overview</h3>
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-md text-sm space-y-2">
-                      <div className="font-medium text-blue-900">Initial Request</div>
-                      <div className="text-blue-800">Provider: {message.metadata.llmProvider}</div>
-                      {message.metadata.model && (
-                        <div className="text-blue-800">Model: {message.metadata.model}</div>
-                      )}
-                      {message.metadata.processingTime && (
-                        <div className="text-blue-800">Total Processing Time: {(message.metadata.processingTime / 1000).toFixed(1)}s</div>
-                      )}
-
-                    </div>
-                  </div>
-
-                  {/* Chain of Thought */}
-                  {message.metadata.intermediateSteps && message.metadata.intermediateSteps.length > 0 && (
-                    <ChainOfThought 
-                      intermediateSteps={message.metadata.intermediateSteps}
-                      className="mt-4"
-                    />
-                  )}
-
-                  {/* Sources */}
-                  {message.metadata.sources && message.metadata.sources.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">Sources ({message.metadata.sources.length})</h3>
-                      <div className="space-y-2">
-                        {message.metadata.sources.map((source, index) => (
-                          <div key={`${source.id}-${index}`} className="border rounded-md p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant={source.type === 'message' ? 'default' : 'secondary'} className="text-xs">
-                                {source.type}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                <Hash className="h-2 w-2" />
-                                {source.channelId}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {formatTimestamp(source.timestamp)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground italic">
-                              "{source.snippet}"
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-
-                </div>
-              </DialogContent>
-            </Dialog>
+        {/* User Message Footer - Just timestamp */}
+        {isUser && (
+          <div className="flex items-center justify-end gap-2 mt-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{formatTimestamp(message.timestamp)}</span>
           </div>
         )}
+
       </div>
 
       {/* User Avatar */}
