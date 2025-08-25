@@ -23,6 +23,13 @@ const QueryOptionsSchema = z.object({
 
 const ExtendedQuerySchema = QueryRequestSchema.extend({
   llmOptions: QueryOptionsSchema.optional(),
+  conversationHistory: z.array(z.object({
+    id: z.string(),
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+    timestamp: z.string(),
+    metadata: z.any().optional(),
+  })).optional(),
 });
 
 const HealthSchema = z.object({
@@ -46,13 +53,15 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const { query, channels, llmOptions = {} } = req.body;
+    const { query, channels, llmOptions = {}, conversationHistory = [] } = req.body;
 
     logger.info('Processing knowledge query', {
       query: query.substring(0, 100) + '...',
       channels,
       provider: llmOptions.provider,
       stream: llmOptions.stream,
+      hasConversationHistory: conversationHistory.length > 0,
+      historyLength: conversationHistory.length,
     });
 
     // Build LLM context with proper channel information including descriptions
@@ -68,12 +77,20 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       })
     );
 
+    // Convert conversation history to LLM context format
+    const contextMessages = conversationHistory.map((msg: any) => ({
+      channel: 'conversation',
+      user: msg.role === 'user' ? 'user' : 'assistant',
+      text: msg.content,
+      timestamp: msg.timestamp,
+    }));
+
     const llmContext: LLMContext = {
       query: query,
       channelIds: channels,
-      messages: [], // Will be populated by tools
+      messages: contextMessages, // Include conversation history as context
       metadata: {
-        total_messages: 0,
+        total_messages: contextMessages.length,
         channels: channelInfo,
         search_time_ms: 0,
         token_count: 0,

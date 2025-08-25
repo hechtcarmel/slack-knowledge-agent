@@ -188,6 +188,25 @@ export class SlackKnowledgeAgent {
         .join('\n');
     }
 
+    // Format conversation history into a readable context
+    if (context.conversationHistory && Array.isArray(context.conversationHistory)) {
+      const historyMessages = context.conversationHistory
+        .filter((msg: any) => msg.user !== 'assistant' && msg.user !== 'user') // Avoid duplicate if from frontend
+        .map((msg: any) => {
+          const role = msg.user === 'user' ? 'User' : msg.user === 'assistant' ? 'Assistant' : msg.user;
+          return `${role}: ${msg.text}`;
+        });
+      
+      if (historyMessages.length > 0) {
+        formatted.conversationContext = `\n## CONVERSATION HISTORY\n${historyMessages.join('\n')}\n`;
+      } else {
+        formatted.conversationContext = '';
+      }
+    } else {
+      // Set empty string if no conversation history to avoid placeholder issues
+      formatted.conversationContext = '';
+    }
+
     return formatted;
   }
 

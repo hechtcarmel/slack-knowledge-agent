@@ -11,7 +11,7 @@ const STORAGE_KEY = 'slack-agent-selected-channels';
  * Handles validation, filtering, and synchronization with available channels
  */
 export function useChannelSelection() {
-  const { handleError } = useErrorHandler({ component: 'useChannelSelection' });
+  const { handleError } = useErrorHandler();
 
   // Get available channels from API
   const {
@@ -25,7 +25,10 @@ export function useChannelSelection() {
     STORAGE_KEY,
     [],
     {
-      onError: error => handleError(error, { action: 'localStorage_access' }),
+      onError: error => handleError(error, { 
+        component: 'useChannelSelection',
+        action: 'localStorage_access' 
+      }),
     }
   );
 

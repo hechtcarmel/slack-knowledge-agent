@@ -81,6 +81,7 @@ export interface ChatRequest {
   channels: string[];
   options?: ConversationOptions;
   stream?: boolean;
+  conversationHistory?: ChatMessage[];
 }
 
 export interface ChatResponse {

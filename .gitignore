@@ -66,3 +66,5 @@ frontend/build/
 .parcel-cache/
 
 .history
+backend/.private.env
+.private.env

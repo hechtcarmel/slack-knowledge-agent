@@ -11,6 +11,7 @@ Available Channels:
 {channels}
 
 Total Searchable Messages: {totalMessages}
+{conversationContext}
 Current Query: "{query}"
 
 ## CORE CAPABILITIES & STRATEGIC APPROACH

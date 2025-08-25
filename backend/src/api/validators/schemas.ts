@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+// Message schema for conversation history
+const ConversationMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  timestamp: z.string(),
+  metadata: z.any().optional(),
+});
+
 export const QueryRequestSchema = z.object({
   query: z.string().min(1, 'Query cannot be empty').max(1000, 'Query too long'),
   channels: z
@@ -18,6 +27,7 @@ export const QueryRequestSchema = z.object({
         .optional(),
     })
     .optional(),
+  conversationHistory: z.array(ConversationMessageSchema).optional(),
 });
 
 export const ChannelsQuerySchema = z.object({

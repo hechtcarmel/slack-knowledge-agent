@@ -9,6 +9,7 @@ class ChatApiClient {
       query: request.message,
       channels: request.channels,
       options: request.options || { includeFiles: false, includeThreads: true },
+      conversationHistory: request.conversationHistory || [],
     };
 
     const response = await fetch('/api/query', {

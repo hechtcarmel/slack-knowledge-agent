@@ -12,7 +12,7 @@ import { ConversationOptions } from '@/types/chat';
  */
 export function useApp() {
   const { state, dispatch } = useAppState();
-  const { handleError } = useErrorHandler({ component: 'useApp' });
+  const { handleError } = useErrorHandler();
 
   // Layout management
   const layoutManager = useResponsiveLayout();

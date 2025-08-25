@@ -14,7 +14,7 @@ export interface ChatManagerOptions {
  * Handles message sending, conversation state, and AI interaction
  */
 export function useChatManager(options: ChatManagerOptions = {}) {
-  const { handleError } = useErrorHandler({ component: 'useChatManager' });
+  const { handleError } = useErrorHandler();
   const sendMessageMutation = useSendMessageMutation();
 
   // Chat state
@@ -36,6 +36,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
     ) => {
       if (!message.trim()) {
         handleError(new Error('Message cannot be empty'), {
+          component: 'useChatManager',
           action: 'send_message',
         });
         return;
@@ -43,6 +44,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
 
       if (channels.length === 0) {
         handleError(new Error('Please select at least one channel'), {
+          component: 'useChatManager',
           action: 'send_message',
         });
         return;
@@ -64,12 +66,13 @@ export function useChatManager(options: ChatManagerOptions = {}) {
         // Show AI typing indicator
         setIsAiTyping(true);
 
-        // Send to backend
+        // Send to backend with conversation history
         const response = await sendMessageMutation.mutateAsync({
           message: message.trim(),
           channels,
           options: conversationOptions,
           stream: false,
+          conversationHistory: messages, // Include all previous messages for context
         });
 
         // Hide typing indicator
@@ -92,7 +95,10 @@ export function useChatManager(options: ChatManagerOptions = {}) {
         setIsAiTyping(false);
         const errorMessage =
           error instanceof Error ? error.message : 'Failed to send message';
-        handleError(new Error(errorMessage), { action: 'send_message' });
+        handleError(new Error(errorMessage), { 
+          component: 'useChatManager',
+          action: 'send_message' 
+        });
         options.onError?.(error as Error);
       }
     },
