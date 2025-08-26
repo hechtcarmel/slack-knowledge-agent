@@ -38,14 +38,29 @@ export interface SlackMemoryConfig {
   maxTokens?: number;
   maxMessages?: number;
   sessionId?: string;
+  compressionEnabled?: boolean;
+  compressionThreshold?: number;
+}
+
+/**
+ * Chat message from frontend
+ */
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  metadata?: any;
 }
 
 export class SlackConversationMemory extends BaseMemory {
-  private chatHistory = new InMemoryChatMessageHistory();
-  private maxMessages: number;
-  private maxTokens: number;
-  private sessionId?: string;
-  private logger = Logger.create('SlackMemory');
+  protected chatHistory = new InMemoryChatMessageHistory();
+  protected maxMessages: number;
+  protected maxTokens: number;
+  public sessionId?: string;
+  protected logger = Logger.create('SlackMemory');
+  private compressionEnabled: boolean;
+  private compressionThreshold: number;
 
   memoryKeys = ['chat_history'];
 
@@ -54,6 +69,8 @@ export class SlackConversationMemory extends BaseMemory {
     this.maxMessages = config.maxMessages || 20;
     this.maxTokens = config.maxTokens || 2000; // Reasonable default for context window
     this.sessionId = config.sessionId;
+    this.compressionEnabled = config.compressionEnabled ?? true;
+    this.compressionThreshold = config.compressionThreshold ?? 0.8; // Compress at 80% of token limit
   }
 
   async loadMemoryVariables(_values: InputValues): Promise<MemoryVariables> {
@@ -154,11 +171,257 @@ export class SlackConversationMemory extends BaseMemory {
   /**
    * Estimate token count for messages using simple heuristic
    */
-  private estimateTokenCount(messages: BaseMessage[]): number {
+  protected estimateTokenCount(messages: BaseMessage[]): number {
     // Simple estimation: ~4 characters per token (OpenAI standard)
     const totalChars = messages
       .map(msg => msg.content.toString().length)
       .reduce((sum, len) => sum + len, 0);
     return Math.ceil(totalChars / 4);
+  }
+
+  /**
+   * Synchronize memory with frontend conversation history
+   * This rebuilds the memory from the frontend's message history
+   */
+  public async syncWithFrontendHistory(messages: ChatMessage[]): Promise<void> {
+    if (!messages || messages.length === 0) {
+      this.logger.debug('No frontend history to sync');
+      return;
+    }
+
+    this.logger.debug('Syncing with frontend history', {
+      messageCount: messages.length,
+      sessionId: this.sessionId,
+    });
+
+    // Clear existing memory
+    await this.clear();
+
+    // Add messages from frontend history
+    for (const message of messages) {
+      try {
+        if (message.role === 'user') {
+          await this.chatHistory.addUserMessage(message.content);
+        } else if (message.role === 'assistant') {
+          await this.chatHistory.addAIChatMessage(message.content);
+        }
+      } catch (error) {
+        this.logger.warn('Failed to add message to memory', {
+          messageId: message.id,
+          role: message.role,
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    // Check if compression is needed after sync
+    const currentMessages = await this.chatHistory.getMessages();
+    if (this.shouldCompress(currentMessages)) {
+      await this.compressOldMessages();
+    }
+
+    this.logger.info('Frontend history synced successfully', {
+      originalCount: messages.length,
+      finalCount: (await this.chatHistory.getMessages()).length,
+      sessionId: this.sessionId,
+    });
+  }
+
+  /**
+   * Add a new message pair (user input + AI response) to memory
+   */
+  public async addMessageExchange(userMessage: string, aiResponse: string): Promise<void> {
+    await this.chatHistory.addUserMessage(userMessage);
+    await this.chatHistory.addAIChatMessage(aiResponse);
+
+    // Check if compression is needed
+    const messages = await this.chatHistory.getMessages();
+    if (this.shouldCompress(messages)) {
+      await this.compressOldMessages();
+    }
+
+    this.logger.debug('Message exchange added to memory', {
+      userMessageLength: userMessage.length,
+      aiResponseLength: aiResponse.length,
+      totalMessages: messages.length,
+      sessionId: this.sessionId,
+    });
+  }
+
+  /**
+   * Compress old messages when approaching token/message limits
+   */
+  public async compressOldMessages(): Promise<void> {
+    if (!this.compressionEnabled) {
+      return;
+    }
+
+    const messages = await this.chatHistory.getMessages();
+    
+    if (messages.length <= 6) { // Keep at least 3 exchanges
+      return;
+    }
+
+    this.logger.info('Starting message compression', {
+      originalCount: messages.length,
+      sessionId: this.sessionId,
+    });
+
+    // Keep the most recent messages and create a summary of older ones
+    const recentMessages = messages.slice(-4); // Keep last 2 exchanges
+    const oldMessages = messages.slice(0, -4);
+
+    if (oldMessages.length === 0) {
+      return;
+    }
+
+    // Create a simple summary of old messages
+    const summary = this.createMessageSummary(oldMessages);
+
+    // Clear and rebuild with summary + recent messages
+    await this.chatHistory.clear();
+    
+    // Add summary as system context
+    if (summary) {
+      await this.chatHistory.addMessage(new AIMessage(
+        `Previous conversation summary: ${summary}`
+      ));
+    }
+
+    // Re-add recent messages
+    for (const message of recentMessages) {
+      await this.chatHistory.addMessage(message);
+    }
+
+    const finalMessages = await this.chatHistory.getMessages();
+    this.logger.info('Message compression completed', {
+      originalCount: messages.length,
+      compressedCount: oldMessages.length,
+      finalCount: finalMessages.length,
+      sessionId: this.sessionId,
+    });
+  }
+
+  /**
+   * Get conversation summary for context
+   */
+  public async getConversationSummary(): Promise<string> {
+    const messages = await this.chatHistory.getMessages();
+    
+    if (messages.length === 0) {
+      return 'No conversation history.';
+    }
+
+    // Create a simple summary
+    const userMessages = messages.filter(m => m instanceof HumanMessage);
+    const aiMessages = messages.filter(m => m instanceof AIMessage);
+
+    const topics = this.extractTopics(messages);
+    
+    return [
+      `Conversation with ${userMessages.length} user questions and ${aiMessages.length} responses.`,
+      topics.length > 0 ? `Main topics: ${topics.join(', ')}.` : '',
+      `Started: recently`,
+    ].filter(Boolean).join(' ');
+  }
+
+  /**
+   * Get detailed memory statistics
+   */
+  public async getDetailedStats(): Promise<{
+    messageCount: number;
+    estimatedTokens: number;
+    memoryUtilization: number;
+    sessionId?: string;
+    compressionEnabled: boolean;
+  }> {
+    const messages = await this.chatHistory.getMessages();
+    const estimatedTokens = this.estimateTokenCount(messages);
+    
+    return {
+      messageCount: messages.length,
+      estimatedTokens,
+      memoryUtilization: Math.min(1.0, estimatedTokens / this.maxTokens),
+      sessionId: this.sessionId,
+      compressionEnabled: this.compressionEnabled,
+    };
+  }
+
+  /**
+   * Check if compression should be triggered
+   */
+  private shouldCompress(messages: BaseMessage[]): boolean {
+    if (!this.compressionEnabled) {
+      return false;
+    }
+
+    // Check message count threshold
+    if (messages.length >= this.maxMessages) {
+      return true;
+    }
+
+    // Check token threshold
+    const estimatedTokens = this.estimateTokenCount(messages);
+    const tokenThreshold = this.maxTokens * this.compressionThreshold;
+    
+    return estimatedTokens >= tokenThreshold;
+  }
+
+  /**
+   * Create a summary of messages for compression
+   */
+  private createMessageSummary(messages: BaseMessage[]): string {
+    if (messages.length === 0) {
+      return '';
+    }
+
+    const userQuestions: string[] = [];
+
+    for (const message of messages) {
+      if (message instanceof HumanMessage) {
+        const content = message.content.toString();
+        // Extract key phrases or topics
+        if (content.length > 0) {
+          userQuestions.push(content.substring(0, 50) + '...');
+        }
+      }
+    }
+
+    const summary = [
+      `Earlier in this conversation, the user asked about: ${userQuestions.slice(0, 3).join('; ')}.`,
+      messages.length > 6 ? `Total of ${Math.floor(messages.length / 2)} question-answer exchanges.` : '',
+    ].filter(Boolean).join(' ');
+
+    return summary;
+  }
+
+  /**
+   * Extract main topics from messages
+   */
+  private extractTopics(messages: BaseMessage[]): string[] {
+    const topics: string[] = [];
+    
+    for (const message of messages) {
+      if (message instanceof HumanMessage) {
+        const content = message.content.toString().toLowerCase();
+        
+        // Simple keyword extraction
+        if (content.includes('channel') || content.includes('slack')) {
+          topics.push('Slack channels');
+        }
+        if (content.includes('file') || content.includes('document')) {
+          topics.push('files');
+        }
+        if (content.includes('user') || content.includes('member')) {
+          topics.push('users');
+        }
+        if (content.includes('message') || content.includes('thread')) {
+          topics.push('messages');
+        }
+      }
+    }
+
+    // Remove duplicates and limit
+    return [...new Set(topics)].slice(0, 3);
   }
 }

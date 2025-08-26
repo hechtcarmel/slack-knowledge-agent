@@ -171,6 +171,8 @@ export class ApplicationFactory {
         const slackService = container.resolve(SERVICE_TOKENS.SLACK_SERVICE) as ISlackService;
         const llmConfig = appConfig.getLLMConfig();
         const queryConfig = appConfig.getQueryConfig();
+        const memoryConfig = appConfig.getMemoryConfig();
+        const sessionConfig = appConfig.getSessionConfig();
 
         return new LLMService(slackService, {
           provider: {
@@ -191,9 +193,17 @@ export class ApplicationFactory {
             verbose: process.env.NODE_ENV === 'development',
             returnIntermediateSteps: true,
             handleParsingErrors: true,
-            memoryEnabled: true,
-            memoryMaxTokens: 2000,
-            memoryMaxMessages: 20,
+            memoryEnabled: memoryConfig.enabled,
+            memoryMaxTokens: memoryConfig.maxTokens,
+            memoryMaxMessages: memoryConfig.maxMessages,
+          },
+          session: {
+            sessionTTLMinutes: memoryConfig.sessionTTLMinutes,
+            cleanupIntervalMinutes: memoryConfig.cleanupIntervalMinutes,
+            maxSessions: sessionConfig.maxSessions,
+            maxSessionsPerUser: sessionConfig.maxSessionsPerUser,
+            memoryMaxTokens: memoryConfig.maxTokens,
+            memoryMaxMessages: memoryConfig.maxMessages,
           },
         });
       },

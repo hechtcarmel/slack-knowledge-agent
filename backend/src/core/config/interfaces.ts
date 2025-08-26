@@ -68,6 +68,21 @@ export interface WebhookConfig {
   maxResponseLength: number;
 }
 
+export interface MemoryConfig {
+  enabled: boolean;
+  maxTokens: number;
+  maxMessages: number;
+  sessionTTLMinutes: number;
+  cleanupIntervalMinutes: number;
+  compressionEnabled: boolean;
+  compressionThreshold: number;
+}
+
+export interface SessionConfig {
+  maxSessions: number;
+  maxSessionsPerUser: number;
+}
+
 /**
  * Main application configuration interface
  */
@@ -79,6 +94,8 @@ export interface AppConfiguration {
   logging: LoggingConfig;
   security: SecurityConfig;
   webhook: WebhookConfig;
+  memory: MemoryConfig;
+  session: SessionConfig;
 }
 
 /**
@@ -121,6 +138,19 @@ export interface EnvironmentVariables {
   WEBHOOK_ENABLE_THREADING: boolean;
   WEBHOOK_ENABLE_DMS: boolean;
   WEBHOOK_MAX_RESPONSE_LENGTH: number;
+
+  // Memory
+  MEMORY_ENABLED: boolean;
+  MEMORY_MAX_TOKENS: number;
+  MEMORY_MAX_MESSAGES: number;
+  MEMORY_SESSION_TTL_MINUTES: number;
+  MEMORY_CLEANUP_INTERVAL_MINUTES: number;
+  MEMORY_COMPRESSION_ENABLED: boolean;
+  MEMORY_COMPRESSION_THRESHOLD: number;
+
+  // Session
+  SESSION_MAX_SESSIONS: number;
+  SESSION_MAX_SESSIONS_PER_USER: number;
 }
 
 /**
@@ -185,5 +215,18 @@ export const CONFIG_DEFAULTS = {
     enableThreading: true,
     enableDms: true,
     maxResponseLength: 4000,
+  },
+  memory: {
+    enabled: true,
+    maxTokens: 2000,
+    maxMessages: 20,
+    sessionTTLMinutes: 60,
+    cleanupIntervalMinutes: 10,
+    compressionEnabled: true,
+    compressionThreshold: 0.8,
+  },
+  session: {
+    maxSessions: 1000,
+    maxSessionsPerUser: 10,
   },
 } as const;

@@ -101,7 +101,8 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    */
   processQuery(
     context: LLMContext,
-    config?: Partial<LLMConfig>
+    config?: Partial<LLMConfig>,
+    sessionId?: string
   ): Promise<QueryResult>;
 
   /**
@@ -109,7 +110,8 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    */
   streamQuery(
     context: LLMContext,
-    config?: Partial<LLMConfig>
+    config?: Partial<LLMConfig>,
+    sessionId?: string
   ): AsyncIterable<StreamChunk>;
 
   /**

@@ -3,6 +3,7 @@ import { LLMError } from '@/utils/errors.js';
 import { IInitializableService } from '@/core/container/interfaces.js';
 import { LLMProviderManager } from './LLMProviderManager.js';
 import { AgentManager } from './AgentManager.js';
+import { SessionManager } from './SessionManager.js';
 import { ISlackService } from '@/interfaces/services/ISlackService.js';
 import {
   LLMContext,
@@ -12,6 +13,7 @@ import {
   LLMUsage,
   LLMProvider,
 } from '@/interfaces/services/ILLMService.js';
+import { ChatMessage } from '@/llm/memory/SlackMemory.js';
 
 /**
  * Query execution configuration
@@ -37,6 +39,7 @@ export class QueryExecutor implements IInitializableService {
   constructor(
     private providerManager: LLMProviderManager,
     private agentManager: AgentManager,
+    private sessionManager: SessionManager,
     private slackService: ISlackService,
     private config: QueryExecutorConfig
   ) {}
@@ -53,7 +56,8 @@ export class QueryExecutor implements IInitializableService {
    */
   public async executeQuery(
     context: LLMContext,
-    config: Partial<LLMConfig> = {}
+    config: Partial<LLMConfig> = {},
+    sessionId?: string
   ): Promise<QueryResult> {
     const queryId = this.generateQueryId();
     const startTime = Date.now();
@@ -75,7 +79,7 @@ export class QueryExecutor implements IInitializableService {
       });
 
       // Create query execution promise
-      const queryPromise = this.executeQueryInternal(context, config, queryId);
+      const queryPromise = this.executeQueryInternal(context, config, queryId, sessionId);
 
       // Add to active queries
       this.activeQueries.set(queryId, queryPromise);
@@ -114,7 +118,8 @@ export class QueryExecutor implements IInitializableService {
    */
   public async *streamQuery(
     context: LLMContext,
-    config: Partial<LLMConfig> = {}
+    config: Partial<LLMConfig> = {},
+    sessionId?: string
   ): AsyncIterable<StreamChunk> {
     const queryId = this.generateQueryId();
 
@@ -135,7 +140,7 @@ export class QueryExecutor implements IInitializableService {
       });
 
       // Create streaming iterator
-      const streamIterator = this.streamQueryInternal(context, config, queryId);
+      const streamIterator = this.streamQueryInternal(context, config, queryId, sessionId);
 
       // Add a promise to track completion
       const trackingPromise = (async () => {
@@ -146,7 +151,7 @@ export class QueryExecutor implements IInitializableService {
       
       this.activeQueries.set(queryId, trackingPromise);
 
-      yield* this.streamQueryInternal(context, config, queryId);
+      yield* this.streamQueryInternal(context, config, queryId, sessionId);
     } catch (error) {
       this.logger.error('Streaming query failed', error as Error, {
         queryId,
@@ -180,7 +185,8 @@ export class QueryExecutor implements IInitializableService {
   private async executeQueryInternal(
     context: LLMContext,
     config: Partial<LLMConfig>,
-    _queryId: string
+    _queryId: string,
+    sessionId?: string
   ): Promise<QueryResult> {
     // Determine provider and model
     const provider =
@@ -191,14 +197,49 @@ export class QueryExecutor implements IInitializableService {
     // Ensure bot has access to channels
     await this.ensureChannelAccess(context.channelIds);
 
-    // Get agent for the provider
-    const agent = await this.agentManager.getAgent(provider, model);
+    // Get or create session if sessionId provided
+    let session = null;
+    if (sessionId) {
+      session = this.sessionManager.getOrCreateSession(
+        sessionId,
+        undefined, // userId - could be added later
+        context.channelIds
+      );
+
+      // Sync frontend history with memory if provided
+      if (context.messages && context.messages.length > 0) {
+        const chatMessages: ChatMessage[] = context.messages.map(msg => ({
+          id: `${msg.timestamp}-${msg.user}`,
+          role: msg.user === 'user' ? 'user' : 'assistant',
+          content: msg.text,
+          timestamp: msg.timestamp,
+        }));
+
+        await session.memory.syncWithFrontendHistory(chatMessages);
+      }
+
+      // Update session metadata
+      this.sessionManager.updateSessionMetadata(sessionId, {
+        provider,
+        model,
+        messageCount: context.messages?.length || 0,
+      });
+    }
+
+    // Get agent for the provider with session memory
+    const agent = await this.agentManager.getAgent(provider, model, session?.memory);
 
     // Build agent context
     const agentContext = this.buildAgentContext(context);
 
     // Execute the agent
     const result = await agent.query(context.query, agentContext);
+
+    // If we have a session, the memory is automatically updated by the agent
+    // Update session access time
+    if (session) {
+      session.lastAccessed = new Date();
+    }
 
     // Extract and calculate usage information
     const usage = this.extractUsageInfo(result, context, provider, model);
@@ -221,7 +262,8 @@ export class QueryExecutor implements IInitializableService {
   private async *streamQueryInternal(
     context: LLMContext,
     config: Partial<LLMConfig>,
-    _queryId: string
+    _queryId: string,
+    sessionId?: string
   ): AsyncIterable<StreamChunk> {
     // Determine provider and model
     const provider =
@@ -232,8 +274,30 @@ export class QueryExecutor implements IInitializableService {
     // Ensure bot has access to channels
     await this.ensureChannelAccess(context.channelIds);
 
-    // Get agent for the provider
-    const agent = await this.agentManager.getAgent(provider, model);
+    // Get or create session if sessionId provided
+    let session = null;
+    if (sessionId) {
+      session = this.sessionManager.getOrCreateSession(
+        sessionId,
+        undefined,
+        context.channelIds
+      );
+
+      // Sync frontend history with memory if provided
+      if (context.messages && context.messages.length > 0) {
+        const chatMessages: ChatMessage[] = context.messages.map(msg => ({
+          id: `${msg.timestamp}-${msg.user}`,
+          role: msg.user === 'user' ? 'user' : 'assistant',
+          content: msg.text,
+          timestamp: msg.timestamp,
+        }));
+
+        await session.memory.syncWithFrontendHistory(chatMessages);
+      }
+    }
+
+    // Get agent for the provider with session memory
+    const agent = await this.agentManager.getAgent(provider, model, session?.memory);
 
     // Build agent context
     const agentContext = this.buildAgentContext(context);

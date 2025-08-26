@@ -93,15 +93,30 @@ export class AgentManager implements IInitializableService, IDisposableService {
 
   /**
    * Get an agent for the specified provider and model
+   * If sessionMemory is provided, creates a new agent with that memory instead of using cache
    */
   public async getAgent(
     provider?: LLMProvider,
-    model?: string
+    model?: string,
+    sessionMemory?: SlackConversationMemory
   ): Promise<SlackKnowledgeAgent> {
     const targetProvider =
       provider || this.providerManager.getCurrentProvider();
     const targetModel =
       model || this.providerManager.getDefaultModelForProvider(targetProvider);
+
+    // If session memory is provided, create a new agent with that memory
+    if (sessionMemory) {
+      this.logger.debug('Creating agent with session memory', {
+        provider: targetProvider,
+        model: targetModel,
+        sessionId: sessionMemory.sessionId,
+      });
+
+      return await this.createAgent(targetProvider, targetModel, sessionMemory);
+    }
+
+    // Otherwise, use cached agents as before
     const cacheKey = `${targetProvider}:${targetModel}`;
 
     // Check if we have a cached agent
@@ -238,11 +253,15 @@ export class AgentManager implements IInitializableService, IDisposableService {
    */
   private async createAgent(
     provider: LLMProvider,
-    model: string
+    model: string,
+    sessionMemory?: SlackConversationMemory
   ): Promise<SlackKnowledgeAgent> {
     try {
       // Get the LLM provider instance
       const llmProvider = this.providerManager.getProvider(provider);
+
+      // Use session memory if provided, otherwise use global memory
+      const memoryToUse = sessionMemory || this.memory;
 
       // Create agent with configuration
       const agent = new SlackKnowledgeAgent(llmProvider as any, this.tools, {
@@ -250,7 +269,7 @@ export class AgentManager implements IInitializableService, IDisposableService {
         verbose: this.config.verbose,
         returnIntermediateSteps: this.config.returnIntermediateSteps,
         handleParsingErrors: this.config.handleParsingErrors,
-        memory: this.memory,
+        memory: memoryToUse,
       });
 
       // Initialize the agent
@@ -260,7 +279,8 @@ export class AgentManager implements IInitializableService, IDisposableService {
         provider,
         model,
         maxIterations: this.config.maxIterations,
-        hasMemory: !!this.memory,
+        hasMemory: !!memoryToUse,
+        isSessionMemory: !!sessionMemory,
       });
 
       return agent;

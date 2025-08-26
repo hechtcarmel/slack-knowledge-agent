@@ -77,6 +77,7 @@ export interface ConversationSummary {
 
 export interface ChatRequest {
   conversationId?: string;
+  sessionId?: string;
   message: string;
   channels: string[];
   options?: ConversationOptions;

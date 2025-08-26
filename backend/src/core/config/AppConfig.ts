@@ -13,6 +13,8 @@ import {
   LoggingConfig,
   SecurityConfig,
   WebhookConfig,
+  MemoryConfig,
+  SessionConfig,
 } from './interfaces.js';
 
 // Load environment variables
@@ -75,6 +77,25 @@ const EnvironmentSchema = z.object({
     .transform(s => s === 'true')
     .default('true'),
   WEBHOOK_MAX_RESPONSE_LENGTH: z.string().transform(Number).default('4000'),
+
+  // Memory Configuration
+  MEMORY_ENABLED: z
+    .string()
+    .transform(s => s === 'true')
+    .default('true'),
+  MEMORY_MAX_TOKENS: z.string().transform(Number).default('200000'),
+  MEMORY_MAX_MESSAGES: z.string().transform(Number).default('200'),
+  MEMORY_SESSION_TTL_MINUTES: z.string().transform(Number).default('120'),
+  MEMORY_CLEANUP_INTERVAL_MINUTES: z.string().transform(Number).default('10'),
+  MEMORY_COMPRESSION_ENABLED: z
+    .string()
+    .transform(s => s === 'true')
+    .default('false'),
+  MEMORY_COMPRESSION_THRESHOLD: z.string().transform(Number).default('0.8'),
+
+  // Session Configuration
+  SESSION_MAX_SESSIONS: z.string().transform(Number).default('1000'),
+  SESSION_MAX_SESSIONS_PER_USER: z.string().transform(Number).default('10'),
 });
 
 /**
@@ -157,6 +178,20 @@ export class AppConfig {
    */
   public getWebhookConfig(): WebhookConfig {
     return this.config.webhook;
+  }
+
+  /**
+   * Get memory configuration
+   */
+  public getMemoryConfig(): MemoryConfig {
+    return this.config.memory;
+  }
+
+  /**
+   * Get session configuration
+   */
+  public getSessionConfig(): SessionConfig {
+    return this.config.session;
   }
 
   /**
@@ -307,6 +342,21 @@ export class AppConfig {
       maxResponseLength: env.WEBHOOK_MAX_RESPONSE_LENGTH,
     };
 
+    const memoryConfig: MemoryConfig = {
+      enabled: env.MEMORY_ENABLED,
+      maxTokens: env.MEMORY_MAX_TOKENS,
+      maxMessages: env.MEMORY_MAX_MESSAGES,
+      sessionTTLMinutes: env.MEMORY_SESSION_TTL_MINUTES,
+      cleanupIntervalMinutes: env.MEMORY_CLEANUP_INTERVAL_MINUTES,
+      compressionEnabled: env.MEMORY_COMPRESSION_ENABLED,
+      compressionThreshold: env.MEMORY_COMPRESSION_THRESHOLD,
+    };
+
+    const sessionConfig: SessionConfig = {
+      maxSessions: env.SESSION_MAX_SESSIONS,
+      maxSessionsPerUser: env.SESSION_MAX_SESSIONS_PER_USER,
+    };
+
     return {
       server: serverConfig,
       slack: slackConfig,
@@ -315,6 +365,8 @@ export class AppConfig {
       logging: loggingConfig,
       security: securityConfig,
       webhook: webhookConfig,
+      memory: memoryConfig,
+      session: sessionConfig,
     };
   }
 

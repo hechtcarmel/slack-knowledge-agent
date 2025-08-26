@@ -140,6 +140,7 @@ export const SERVICE_TOKENS = {
   LLM_PROVIDER_MANAGER: Symbol('LLMProviderManager'),
   QUERY_EXECUTOR: Symbol('QueryExecutor'),
   AGENT_MANAGER: Symbol('AgentManager'),
+  SESSION_MANAGER: Symbol('SessionManager'),
 
   // Webhook Services
   WEBHOOK_SERVICE: Symbol('WebhookService'),

@@ -30,6 +30,7 @@ const ExtendedQuerySchema = QueryRequestSchema.extend({
     timestamp: z.string(),
     metadata: z.any().optional(),
   })).optional(),
+  sessionId: z.string().optional(),
 });
 
 const HealthSchema = z.object({
@@ -53,7 +54,13 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const { query, channels, llmOptions = {}, conversationHistory = [] } = req.body;
+    const { 
+      query, 
+      channels, 
+      llmOptions = {}, 
+      conversationHistory = [], 
+      sessionId 
+    } = req.body;
 
     logger.info('Processing knowledge query', {
       query: query.substring(0, 100) + '...',
@@ -62,6 +69,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
       stream: llmOptions.stream,
       hasConversationHistory: conversationHistory.length > 0,
       historyLength: conversationHistory.length,
+      sessionId: sessionId ? sessionId.substring(0, 8) + '...' : 'none',
     });
 
     // Build LLM context with proper channel information including descriptions
@@ -113,7 +121,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
           model: llmOptions.model,
           maxTokens: llmOptions.max_tokens,
           temperature: llmOptions.temperature,
-        })) {
+        }, sessionId)) {
           const data = JSON.stringify(chunk);
           res.write(`data: ${data}\n\n`);
 
@@ -137,7 +145,7 @@ router.post('/', validateRequest(ExtendedQuerySchema), async (req, res) => {
         model: llmOptions.model,
         maxTokens: llmOptions.max_tokens,
         temperature: llmOptions.temperature,
-      });
+      }, sessionId);
 
       const responseTime = Date.now() - startTime;
 

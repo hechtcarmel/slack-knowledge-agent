@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useSendMessageMutation } from './chat';
 import { useErrorHandler } from './useErrorHandler';
 import { ChatMessage, ConversationOptions, Conversation } from '@/types/chat';
+import { getOrCreateSessionId, clearSessionId } from '@/utils/session';
 
 export interface ChatManagerOptions {
   onMessageSent?: (message: ChatMessage) => void;
@@ -20,6 +21,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [sessionId, setSessionId] = useState(() => getOrCreateSessionId());
 
   // Default conversation options
   const defaultOptions: ConversationOptions = {
@@ -68,6 +70,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
 
         // Send to backend with conversation history
         const response = await sendMessageMutation.mutateAsync({
+          sessionId,
           message: message.trim(),
           channels,
           options: conversationOptions,
@@ -105,10 +108,12 @@ export function useChatManager(options: ChatManagerOptions = {}) {
     [sendMessageMutation, handleError, options, defaultOptions]
   );
 
-  // Create new conversation (clear messages)
+  // Create new conversation (clear messages and create new session)
   const startNewConversation = useCallback(() => {
     setMessages([]);
     setIsAiTyping(false);
+    const newSessionId = clearSessionId();
+    setSessionId(newSessionId);
   }, []);
 
   // Add message to conversation
@@ -170,6 +175,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
     isAiTyping,
     isLoading,
     error,
+    sessionId,
 
     // Actions
     sendMessage,

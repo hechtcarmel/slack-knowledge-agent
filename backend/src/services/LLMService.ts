@@ -3,6 +3,7 @@ import { LLMError } from '@/utils/errors.js';
 import { LLMProviderManager, LLMProviderConfig } from './LLMProviderManager.js';
 import { QueryExecutor, QueryExecutorConfig } from './QueryExecutor.js';
 import { AgentManager, AgentConfig } from './AgentManager.js';
+import { SessionManager, SessionManagerConfig } from './SessionManager.js';
 import { ISlackService } from '@/interfaces/services/ISlackService.js';
 import {
   ILLMService,
@@ -20,6 +21,7 @@ export interface LLMServiceConfig {
   provider: LLMProviderConfig;
   executor: QueryExecutorConfig;
   agent: AgentConfig;
+  session: SessionManagerConfig;
 }
 
 /**
@@ -34,6 +36,7 @@ export class LLMService implements ILLMService {
   private providerManager: LLMProviderManager;
   private queryExecutor: QueryExecutor;
   private agentManager: AgentManager;
+  private sessionManager: SessionManager;
   private isInitialized = false;
 
   constructor(
@@ -42,6 +45,7 @@ export class LLMService implements ILLMService {
   ) {
     // Create service instances
     this.providerManager = new LLMProviderManager(config.provider);
+    this.sessionManager = new SessionManager(config.session);
     this.agentManager = new AgentManager(
       this.providerManager,
       this.slackService,
@@ -50,6 +54,7 @@ export class LLMService implements ILLMService {
     this.queryExecutor = new QueryExecutor(
       this.providerManager,
       this.agentManager,
+      this.sessionManager,
       this.slackService,
       config.executor
     );
@@ -69,6 +74,7 @@ export class LLMService implements ILLMService {
     try {
       // Initialize in dependency order
       await this.providerManager.initialize();
+      await this.sessionManager.initialize();
       await this.agentManager.initialize();
       await this.queryExecutor.initialize();
 
@@ -90,7 +96,8 @@ export class LLMService implements ILLMService {
    */
   public async processQuery(
     context: LLMContext,
-    config: Partial<LLMConfig> = {}
+    config: Partial<LLMConfig> = {},
+    sessionId?: string
   ): Promise<QueryResult> {
     this.ensureInitialized();
 
@@ -104,7 +111,7 @@ export class LLMService implements ILLMService {
         channels: context.channelIds.length,
       });
 
-      const result = await this.queryExecutor.executeQuery(context, config);
+      const result = await this.queryExecutor.executeQuery(context, config, sessionId);
 
       const processingTime = Date.now() - startTime;
 
@@ -134,7 +141,8 @@ export class LLMService implements ILLMService {
    */
   public async *streamQuery(
     context: LLMContext,
-    config: Partial<LLMConfig> = {}
+    config: Partial<LLMConfig> = {},
+    sessionId?: string
   ): AsyncIterable<StreamChunk> {
     this.ensureInitialized();
 
@@ -146,7 +154,7 @@ export class LLMService implements ILLMService {
         channels: context.channelIds.length,
       });
 
-      yield* this.queryExecutor.streamQuery(context, config);
+      yield* this.queryExecutor.streamQuery(context, config, sessionId);
     } catch (error) {
       this.logger.error('Streaming query failed', error as Error, {
         query: context.query.substring(0, 100) + '...',
@@ -278,6 +286,7 @@ export class LLMService implements ILLMService {
     try {
       // Dispose in reverse dependency order
       await this.agentManager.dispose();
+      await this.sessionManager.dispose();
       // Provider manager and query executor don't need explicit disposal
 
       this.isInitialized = false;
