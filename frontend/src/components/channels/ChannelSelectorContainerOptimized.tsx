@@ -45,16 +45,18 @@ export const ChannelSelectorContainer = memo(function ChannelSelectorContainer({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="flex flex-col h-full space-y-4">
+      <div className="flex-1 flex flex-col min-h-0">
         <h3 className="text-sm font-medium mb-2">Select Channels</h3>
-        <ChannelSelector
-          channels={channels.allChannels}
-          selectedChannels={channels.selectedChannelIds}
-          onSelectionChange={handleSelectionChange}
-          isLoading={channels.isLoading}
-          hideHeader={true}
-        />
+        <div className="flex-1 min-h-0">
+          <ChannelSelector
+            channels={channels.allChannels}
+            selectedChannels={channels.selectedChannelIds}
+            onSelectionChange={handleSelectionChange}
+            isLoading={channels.isLoading}
+            hideHeader={true}
+          />
+        </div>
       </div>
 
       {channels.selectedChannelIds.length === 0 && (

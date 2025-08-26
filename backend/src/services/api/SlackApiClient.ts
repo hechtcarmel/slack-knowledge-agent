@@ -112,7 +112,7 @@ export class SlackApiClient implements ISlackApiClient {
         const result = await this.client.conversations.list({
           types: 'public_channel',
           exclude_archived: true,
-          limit: 1000,
+          limit: 99999999,
         });
 
         if (!result.ok) {
@@ -662,17 +662,17 @@ export class SlackApiClient implements ISlackApiClient {
   private mapMessageFromApi(msg: any, channelId: string): Message {
     // Extract or construct permalink
     let permalink: string | undefined;
-    
+
     // If the message has a permalink field (from search API)
     if (msg.permalink) {
       permalink = msg.permalink;
-    } 
+    }
     // Otherwise, try to construct it if we have team info
     else if (this.teamInfo?.url && channelId && msg.ts) {
       const baseUrl = this.teamInfo.url.replace(/\/$/, '');
       const messageId = 'p' + msg.ts.replace('.', '');
       permalink = `${baseUrl}/archives/${channelId}/${messageId}`;
-      
+
       // If it's a thread reply, modify the permalink format
       if (msg.thread_ts && msg.thread_ts !== msg.ts) {
         const threadId = 'p' + msg.thread_ts.replace('.', '');

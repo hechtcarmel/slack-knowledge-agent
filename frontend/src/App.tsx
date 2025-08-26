@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChatContainer } from '@/components/chat/ChatContainer';
-import { ChannelSelector } from '@/components/ChannelSelector';
+import { SidebarContent } from '@/components/layout/SidebarComponents';
 import { useChannelsQuery } from '@/hooks/api';
 import { useSendMessageMutation } from '@/hooks/chat';
 import { ConversationOptions, ChatMessage } from '@/types/chat';
@@ -8,7 +8,6 @@ import { AlertCircle, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import slackLogo from '@/assets/slack-logo.png';
 
 
 function App() {
@@ -18,6 +17,16 @@ function App() {
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleChannelChange = useCallback((channels: string[]) => {
+    setSelectedChannels(channels);
+    // Close mobile sidebar when channels are selected for better UX
+    if (window.innerWidth < 1024) {
+      setIsMobileSidebarOpen(false);
+    }
+  }, []);
+
   const [hasRestoredFromStorage, setHasRestoredFromStorage] = useState(false);
 
   // API hooks
@@ -140,46 +149,7 @@ function App() {
     (channelsQuery.error ? 'Failed to load channels' : null) ||
     (sendMessageMutation.error ? 'Failed to send message' : null);
 
-  // Sidebar content component (shared between mobile and desktop)
-  const SidebarContent = () => (
-    <div className="p-4 border-b border-border">
-      <div className="flex items-center gap-3 mb-4">
-        <img src={slackLogo} alt="Slack" className="h-8 w-8" />
-        <h2 className="text-lg font-semibold">Slack Knowledge Agent</h2>
-      </div>
-      
-      {/* Channel Selection */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-sm font-medium mb-2">Select Channels</h3>
-          <ChannelSelector
-            channels={channels}
-            selectedChannels={selectedChannels}
-            onSelectionChange={(channels) => {
-              setSelectedChannels(channels);
-              // Close mobile sidebar when channels are selected for better UX
-              if (window.innerWidth < 1024) {
-                setIsMobileSidebarOpen(false);
-              }
-            }}
-            isLoading={isLoading}
-            hideHeader={true}
-          />
-        </div>
-
-        {selectedChannels.length === 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-amber-800">
-                Please select at least one channel to start chatting.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  // All sidebar components are now extracted to prevent re-renders
 
   return (
     <div className="h-screen bg-background">
@@ -214,7 +184,12 @@ function App() {
                   </div>
                 }
               >
-                <SidebarContent />
+                <SidebarContent
+              selectedChannels={selectedChannels}
+              channels={channels}
+              isLoading={isLoading}
+              onChannelChange={handleChannelChange}
+            />
               </ErrorBoundary>
             </div>
           </SheetContent>
@@ -235,7 +210,12 @@ function App() {
               </div>
             }
           >
-            <SidebarContent />
+            <SidebarContent
+              selectedChannels={selectedChannels}
+              channels={channels}
+              isLoading={isLoading}
+              onChannelChange={handleChannelChange}
+            />
           </ErrorBoundary>
         </div>
 

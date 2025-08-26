@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useChannelsQuery } from '@/hooks/api';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -32,22 +33,137 @@ export function ChannelSelector({
   const channels = providedChannels || fetchedChannels;
   const isLoading = providedLoading ?? fetchLoading;
 
-  const filteredChannels = channels?.filter(channel =>
-    channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.purpose?.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    channel.topic?.value.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredChannels = useMemo(() => 
+    channels?.filter(channel =>
+      channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      channel.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      channel.purpose?.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      channel.topic?.value.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [], [channels, searchQuery]
+  );
 
-  const handleChannelToggle = (channelId: string) => {
+  const handleChannelToggle = useCallback((channelId: string) => {
     if (selectedChannels.includes(channelId)) {
       onSelectionChange(selectedChannels.filter(id => id !== channelId));
     } else {
       onSelectionChange([...selectedChannels, channelId]);
     }
-  };
+  }, [selectedChannels, onSelectionChange]);
 
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
 
+  const handleClearAll = useCallback(() => {
+    onSelectionChange([]);
+  }, [onSelectionChange]);
+
+  // Virtualization setup for large lists
+  const parentRef = useRef<HTMLDivElement>(null);
+  
+  const virtualizer = useVirtualizer({
+    count: filteredChannels.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 80, // Estimated height per item
+    overscan: 5, // Render 5 extra items outside visible area
+  });
+
+  const shouldUseVirtualization = filteredChannels.length > 100;
+
+  // Memoized channel item component
+  const ChannelItem = useCallback(({ channel, index }: { channel: Channel; index?: number }) => (
+    <div
+      key={channel.id}
+      className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-accent-foreground/20 transition-colors"
+      style={index !== undefined ? { height: '80px' } : undefined}
+    >
+      <Checkbox
+        checked={selectedChannels.includes(channel.id)}
+        onCheckedChange={() => handleChannelToggle(channel.id)}
+        className="mt-0.5"
+      />
+      <div 
+        className="flex-1 min-w-0 cursor-pointer"
+        onClick={() => handleChannelToggle(channel.id)}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Hash className="h-4 w-4 text-primary flex-shrink-0" />
+          <span className="font-medium text-sm">{channel.name}</span>
+        </div>
+        {(channel.purpose?.value || channel.topic?.value) && (
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            Purpose: {channel.purpose?.value || channel.topic?.value}
+          </p>
+        )}
+      </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Hash className="h-4 w-4 text-primary" />
+              {channel.name}
+            </DialogTitle>
+            <DialogDescription>
+              Channel information and details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Members</span>
+                <Badge variant="outline">{channel.num_members || 0}</Badge>
+              </div>
+            </div>
+            
+            {channel.purpose?.value && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Purpose</h4>
+                <p className="text-sm text-muted-foreground">{channel.purpose.value}</p>
+                <p className="text-xs text-muted-foreground">
+                  Set by {channel.purpose.creator} on {new Date(channel.purpose.last_set * 1000).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+            
+            {channel.topic?.value && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Topic</h4>
+                <p className="text-sm text-muted-foreground">{channel.topic.value}</p>
+                <p className="text-xs text-muted-foreground">
+                  Set by {channel.topic.creator} on {new Date(channel.topic.last_set * 1000).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+            
+            {channel.description && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Description</h4>
+                <p className="text-sm text-muted-foreground">{channel.description}</p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Channel ID</h4>
+              <code className="text-xs bg-muted px-2 py-1 rounded">{channel.id}</code>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  ), [selectedChannels, handleChannelToggle]);
 
   // Content component
   const SelectorContent = () => (
@@ -59,7 +175,7 @@ export function ChannelSelector({
           type="text"
           placeholder="Search channels..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={handleSearchChange}
           className="pl-10"
         />
       </div>
@@ -73,7 +189,7 @@ export function ChannelSelector({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onSelectionChange([])}
+            onClick={handleClearAll}
             className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
           >
             <X className="h-3 w-3 mr-1" />
@@ -103,104 +219,56 @@ export function ChannelSelector({
 
       {/* Channel List */}
       {!isLoading && (
-        <div className="space-y-2 flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden">
           {filteredChannels.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchQuery ? 'No channels match your search' : 'No channels available'}
             </div>
-          ) : (
-            filteredChannels.map((channel) => (
+          ) : shouldUseVirtualization ? (
+            // Virtualized list for large datasets (100+ channels)
+            <div
+              ref={parentRef}
+              className="h-full overflow-auto"
+              style={{
+                height: '100%',
+                width: '100%',
+              }}
+            >
               <div
-                key={channel.id}
-                className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-accent-foreground/20 transition-colors"
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
               >
-                <Checkbox
-                  checked={selectedChannels.includes(channel.id)}
-                  onCheckedChange={() => handleChannelToggle(channel.id)}
-                  className="mt-0.5"
-                />
-                <div 
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => handleChannelToggle(channel.id)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Hash className="h-4 w-4 text-primary flex-shrink-0" />
-                    <span className="font-medium text-sm">{channel.name}</span>
+                {virtualizer.getVirtualItems().map((virtualItem) => (
+                  <div
+                    key={virtualItem.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualItem.size}px`,
+                      transform: `translateY(${virtualItem.start}px)`,
+                      padding: '4px',
+                    }}
+                  >
+                    <ChannelItem 
+                      channel={filteredChannels[virtualItem.index]} 
+                      index={virtualItem.index}
+                    />
                   </div>
-                  {(channel.purpose?.value || channel.topic?.value) && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      Purpose: {channel.purpose?.value || channel.topic?.value}
-                    </p>
-                  )}
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 flex-shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-primary" />
-                        {channel.name}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Channel information and details
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Members</span>
-                          <Badge variant="outline">{channel.num_members || 0}</Badge>
-                        </div>
-                      </div>
-                      
-                      {channel.purpose?.value && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium">Purpose</h4>
-                          <p className="text-sm text-muted-foreground">{channel.purpose.value}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Set by {channel.purpose.creator} on {new Date(channel.purpose.last_set * 1000).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {channel.topic?.value && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium">Topic</h4>
-                          <p className="text-sm text-muted-foreground">{channel.topic.value}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Set by {channel.topic.creator} on {new Date(channel.topic.last_set * 1000).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {channel.description && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium">Description</h4>
-                          <p className="text-sm text-muted-foreground">{channel.description}</p>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Channel ID</h4>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">{channel.id}</code>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                ))}
               </div>
-            ))
+            </div>
+          ) : (
+            // Regular list for smaller datasets (< 100 channels)
+            <div className="space-y-2 overflow-y-auto h-full">
+              {filteredChannels.map((channel) => (
+                <ChannelItem key={channel.id} channel={channel} />
+              ))}
+            </div>
           )}
         </div>
       )}
