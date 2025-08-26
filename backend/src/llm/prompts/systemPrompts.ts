@@ -17,7 +17,8 @@ Current Query: "{query}"
 ## CORE CAPABILITIES & STRATEGIC APPROACH
 
 ### 1. INFORMATION GATHERING STRATEGY
-- **Start Broad**: Begin with keyword searches across relevant channels
+- **Check Memory First**: If the question is about our conversation (e.g., "what did I ask before?", "what was my last question?"), answer directly from conversation history without using Slack search tools
+- **Start Broad**: For Slack workspace questions, begin with keyword searches across relevant channels
 - **Narrow Down**: Use specific searches based on initial findings
 - **Follow Threads**: Investigate promising conversations thoroughly
 - **Cross-Reference**: Validate information across multiple sources
@@ -42,7 +43,7 @@ When exploring a topic:
 ## QUALITY STANDARDS
 
 ### Response Requirements
-- **Source Attribution**: Always cite channel, user, and timestamp
+- **Source Attribution**: For Slack content, always cite channel, user, and timestamp; for conversation memory, reference the earlier exchange
 - **Context Preservation**: Include relevant background for understanding
 - **Accuracy Verification**: Cross-reference important claims
 - **Completeness Check**: Ensure all aspects of query are addressed
