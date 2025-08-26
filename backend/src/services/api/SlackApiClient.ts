@@ -109,29 +109,30 @@ export class SlackApiClient implements ISlackApiClient {
   public async getChannels(): Promise<Channel[]> {
     try {
       return await this.retryManager.executeWithRetry(async () => {
-        const result = await this.client.conversations.list({
-          types: 'public_channel',
-          exclude_archived: true,
-          limit: 99999999,
-        });
+        let allChannels: any[] = [];
+        let cursor: string | undefined;
 
-        if (!result.ok) {
-          throw new SlackError(
-            `Slack API error: ${result.error}`,
-            'CHANNELS_FETCH_FAILED',
-            result
-          );
-        }
+        do {
+          const result = await this.client.users.conversations({
+            types: 'public_channel,private_channel',
+            exclude_archived: true,
+            limit: 1000,
+            cursor,
+          });
 
-        if (!result.channels) {
-          throw new SlackError(
-            'No channels returned from conversations.list',
-            'CHANNELS_FETCH_FAILED',
-            result
-          );
-        }
+          if (!result.ok) {
+            throw new SlackError(
+              `Slack API error: ${result.error}`,
+              'CHANNELS_FETCH_FAILED',
+              result
+            );
+          }
 
-        return result.channels.map(this.mapChannelFromApi);
+          allChannels.push(...(result.channels || []));
+          cursor = result.response_metadata?.next_cursor;
+        } while (cursor);
+
+        return allChannels.map(this.mapChannelFromApi);
       });
     } catch (error) {
       this.logger.error('Failed to fetch channels', error as Error);
