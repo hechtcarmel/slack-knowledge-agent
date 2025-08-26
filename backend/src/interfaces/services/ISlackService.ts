@@ -85,6 +85,18 @@ export interface ISlackService extends IInitializableService, IHealthCheckable {
   }>;
 
   /**
+   * Get thread replies for a specific message
+   */
+  getThreadReplies(channelId: string, threadTs: string): Promise<{
+    messages: Message[];
+    metadata: {
+      channelName: string;
+      threadTs: string;
+      messageCount: number;
+    };
+  }>;
+
+  /**
    * Get content of a specific file
    */
   getFileContent(fileId: string): Promise<string>;

@@ -333,6 +333,53 @@ export class SlackService implements ISlackService {
     }
   }
 
+  async getThreadReplies(channelId: string, threadTs: string): Promise<{
+    messages: Message[];
+    metadata: {
+      channelName: string;
+      threadTs: string;
+      messageCount: number;
+    };
+  }> {
+    try {
+      const channel = await this.getChannelById(channelId);
+      if (!channel) {
+        throw new SlackError(
+          `Channel not found: ${channelId}`,
+          'CHANNEL_NOT_FOUND'
+        );
+      }
+
+      const thread = await this.apiClient.getThreadReplies(channelId, threadTs);
+
+      this.logger.info('Thread replies retrieved', {
+        channelId,
+        channelName: channel.name,
+        threadTs,
+        messageCount: thread.messages.length,
+      });
+
+      return {
+        messages: thread.messages,
+        metadata: {
+          channelName: channel.name,
+          threadTs,
+          messageCount: thread.messages.length,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to get thread replies', error as Error, {
+        channelId,
+        threadTs,
+      });
+      throw new SlackError(
+        'Failed to get thread replies',
+        'THREAD_ERROR',
+        error
+      );
+    }
+  }
+
   async getFiles(params: FileListParams): Promise<{
     files: File[];
     metadata: {

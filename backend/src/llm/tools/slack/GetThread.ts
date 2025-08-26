@@ -18,7 +18,7 @@ export function createGetThreadTool(
   return new DynamicStructuredTool({
     name: 'get_thread',
     description:
-      'Get all messages in a specific thread. Use this when you need to see the full context of a threaded conversation.',
+      'CRITICAL TOOL for finding answers: Get all messages in a specific thread. ALWAYS use this when you find a message that contains a question (indicated by ? or questioning phrases) to check if it was answered in thread replies. Essential for providing complete question-answer pairs instead of just reporting unanswered questions.',
     schema: getThreadSchema,
     func: async (args: any) => {
       try {
@@ -27,7 +27,7 @@ export function createGetThreadTool(
           thread_ts: args.thread_ts,
         });
 
-        // Get channel by ID or name
+        // Get channel by ID or name first to validate it exists
         const channel =
           (await slackService.getChannelById(args.channel_id)) ||
           (await slackService.getChannelByName(args.channel_id));
@@ -38,24 +38,22 @@ export function createGetThreadTool(
           return errorMessage;
         }
 
-        // Use SlackClient directly for thread retrieval
-        const threadMessages = await (
-          slackService as any
-        ).client.getThreadReplies(channel.id, args.thread_ts);
+        // Use SlackService method for thread retrieval
+        const threadResult = await slackService.getThreadReplies(channel.id, args.thread_ts);
 
         logger.info('Thread retrieved successfully', {
           channel: args.channel_id,
           thread_ts: args.thread_ts,
-          message_count: threadMessages.messages.length,
+          message_count: threadResult.messages.length,
         });
 
         // Return plain text for ReAct agent compatibility
-        if (threadMessages.messages.length === 0) {
+        if (threadResult.messages.length === 0) {
           return `No messages found in thread ${args.thread_ts}.`;
         }
 
         // Format thread messages as readable text
-        const formattedMessages = threadMessages.messages
+        const formattedMessages = threadResult.messages
           .map((msg: any, index: number) => {
             const userDisplay = msg.user || 'Unknown';
             const timeDisplay = new Date(
@@ -68,8 +66,8 @@ export function createGetThreadTool(
 
         // Return structured data with permalinks
         const response = {
-          summary: `Thread in #${channel.name} with ${threadMessages.messages.length} messages:\n\n${formattedMessages}`,
-          messages: threadMessages.messages.map((msg: any) => ({
+          summary: `Thread in #${threadResult.metadata.channelName} with ${threadResult.messages.length} messages:\n\n${formattedMessages}`,
+          messages: threadResult.messages.map((msg: any) => ({
             user: msg.user,
             text: msg.text,
             ts: msg.ts,
@@ -77,7 +75,7 @@ export function createGetThreadTool(
             thread_ts: msg.thread_ts,
             permalink: msg.permalink
           })),
-          totalCount: threadMessages.messages.length
+          totalCount: threadResult.messages.length
         };
 
         return JSON.stringify(response);

@@ -75,6 +75,7 @@ export class SlackTools {
     file_id: z.string().describe('File ID from Slack'),
   });
 
+
   // Tool definitions
   getSearchMessagesTool(): {
     definition: ToolDefinition;
@@ -271,6 +272,7 @@ export class SlackTools {
     };
   }
 
+
   // Tool handler implementations
   private async searchMessages(params: any): Promise<ToolExecutionResult> {
     try {
@@ -400,28 +402,29 @@ export class SlackTools {
     try {
       const validatedParams = this.getThreadSchema.parse(params);
 
-      const thread = await this.slackService.getChannelById(
+      const channel = await this.slackService.getChannelById(
         validatedParams.channel_id
       );
-      if (!thread) {
+      if (!channel) {
         return {
           success: false,
           error: `Channel not found: ${validatedParams.channel_id}`,
         };
       }
 
-      // Use SlackClient directly for thread retrieval
-      const threadMessages = await (
-        this.slackService as any
-      ).client.getThreadReplies(thread.id, validatedParams.thread_ts);
+      // Use SlackService method for thread retrieval
+      const threadResult = await this.slackService.getThreadReplies(
+        channel.id, 
+        validatedParams.thread_ts
+      );
 
       return {
         success: true,
         data: {
           thread: {
-            channel: threadMessages.channel,
-            thread_ts: threadMessages.thread_ts,
-            messages: threadMessages.messages.map((msg: any) => ({
+            channel: channel.id,
+            thread_ts: validatedParams.thread_ts,
+            messages: threadResult.messages.map((msg: any) => ({
               user: msg.user,
               text: msg.text,
               timestamp: msg.ts,
@@ -528,4 +531,5 @@ export class SlackTools {
       };
     }
   }
+
 }
