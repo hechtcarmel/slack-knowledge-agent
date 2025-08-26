@@ -18,6 +18,7 @@ graph TB
     subgraph "Supporting Services"
         AgentManager[Agent Manager<br/>LangChain lifecycle]
         QueryExecutor[Query Executor<br/>Query processing]
+        SessionManager[Session Manager<br/>Memory & sessions]
         ProviderManager[Provider Manager<br/>LLM providers]
         ConfigManager[Config Manager<br/>Channel configuration]
     end
@@ -465,6 +466,140 @@ try {
 }
 ```
 
+## SessionManager
+
+The SessionManager service provides isolated conversation sessions with memory management, enabling the agent to maintain context across multiple interactions while managing memory usage efficiently.
+
+### Purpose
+- Manages isolated conversation sessions using unique session IDs
+- Handles conversation memory synchronization between frontend and backend
+- Provides automatic session cleanup and memory management
+- Implements resource limits to prevent memory leaks
+
+### Key Features
+
+#### Session Isolation
+```typescript
+// Each session has its own memory instance
+const session = sessionManager.getOrCreateSession(
+  sessionId,
+  userId,
+  channelIds
+);
+
+// Memory is isolated per session
+await session.memory.addMessageExchange(userMessage, aiResponse);
+```
+
+#### Frontend History Synchronization
+```typescript
+// Sync frontend conversation history with backend memory
+const chatMessages: ChatMessage[] = context.messages.map(msg => ({
+  id: `${msg.timestamp}-${msg.user}`,
+  role: msg.user === 'user' ? 'user' : 'assistant',
+  content: msg.text,
+  timestamp: msg.timestamp,
+}));
+
+await session.memory.syncWithFrontendHistory(chatMessages);
+```
+
+#### Automatic Cleanup
+```typescript
+// Sessions automatically expire based on TTL
+interface SessionManagerConfig {
+  sessionTTLMinutes: number;        // Session expiration time
+  cleanupIntervalMinutes: number;   // Cleanup frequency  
+  maxSessions: number;              // Global session limit
+  maxSessionsPerUser: number;       // Per-user limit
+  memoryMaxTokens: number;          // Token limit per session
+  memoryMaxMessages: number;        // Message limit per session
+}
+```
+
+### Memory Architecture
+
+The SessionManager uses SlackConversationMemory instances that integrate with LangChain:
+
+```typescript
+export class SlackConversationMemory extends BaseMemory {
+  // LangChain integration
+  async loadMemoryVariables(): Promise<MemoryVariables> {
+    const messages = await this.chatHistory.getMessages();
+    return { chat_history: this.truncateMessages(messages) };
+  }
+  
+  // Frontend synchronization
+  async syncWithFrontendHistory(messages: ChatMessage[]): Promise<void> {
+    await this.clear();
+    for (const message of messages) {
+      if (message.role === 'user') {
+        await this.chatHistory.addUserMessage(message.content);
+      } else {
+        await this.chatHistory.addAIChatMessage(message.content);
+      }
+    }
+  }
+}
+```
+
+### Usage Patterns
+
+#### Query Processing with Session
+```typescript
+// In QueryExecutor
+if (sessionId) {
+  const session = this.sessionManager.getOrCreateSession(
+    sessionId,
+    undefined,
+    context.channelIds
+  );
+
+  // Sync frontend history
+  if (context.messages?.length > 0) {
+    await session.memory.syncWithFrontendHistory(chatMessages);
+  }
+
+  // Create agent with session memory
+  const agent = await this.agentManager.getAgent(provider, model, session.memory);
+}
+```
+
+#### Memory Decision Making
+The agent system prompt now includes intelligent routing:
+- **Conversation queries** ("what did I ask before?") → Use memory directly
+- **Workspace queries** ("find project files") → Use Slack search tools
+- **Mixed queries** → Use both memory and search appropriately
+
+### Configuration
+
+Environment variables that control session behavior:
+```env
+# Memory settings
+MEMORY_ENABLED=true
+MEMORY_MAX_TOKENS=2000
+MEMORY_MAX_MESSAGES=20
+MEMORY_SESSION_TTL_MINUTES=120
+MEMORY_CLEANUP_INTERVAL_MINUTES=30
+MEMORY_COMPRESSION_ENABLED=true
+
+# Session limits
+SESSION_MAX_SESSIONS=100
+SESSION_MAX_SESSIONS_PER_USER=5
+```
+
+### Monitoring
+
+SessionManager provides statistics for monitoring:
+```typescript
+const stats = sessionManager.getStats();
+console.log({
+  totalSessions: stats.totalSessions,
+  averageSessionAge: stats.averageSessionAge,
+  memoryUsageEstimateMB: stats.memoryUsageEstimateMB
+});
+```
+
 ## Performance Considerations
 
 ### Service Caching
@@ -477,7 +612,10 @@ try {
 - **Singleton Services**: Core services use singleton pattern for efficiency
 
 ### Memory Management
-- **Conversation Memory**: Limited memory window to prevent memory leaks
+- **Session Memory**: Session-based memory isolation with automatic cleanup and TTL
+- **Memory Compression**: Automatic compression of old messages when approaching token limits
+- **Resource Limits**: Configurable token and message limits per session
+- **LRU Eviction**: Least recently used session eviction when global limits are reached
 - **Agent Disposal**: Proper cleanup of agent resources
 - **Event Listener Cleanup**: Removal of event listeners during service disposal
 

@@ -16,7 +16,7 @@ Slack Knowledge Agent is an AI-powered service that transforms your Slack worksp
 - **Multi-LLM Support**: Choose between OpenAI (GPT models) and Anthropic (Claude models)
 - **Context-Aware**: Provides answers with proper context, including user attribution and timestamps
 - **Tool Integration**: Uses specialized tools to access different aspects of your Slack data
-- **Memory System**: Maintains conversation context for better follow-up responses
+- **Intelligent Memory System**: Maintains conversation context across sessions, remembers previous questions and discussions for seamless follow-up interactions
 - **Real-time Webhooks**: Responds to @mentions in Slack channels instantly
 - **Thread Continuity**: Maintains conversations within Slack threads
 

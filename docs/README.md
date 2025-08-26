@@ -44,6 +44,7 @@ The Slack Knowledge Agent is an AI-powered service that leverages Slack APIs to 
 - **Modern Backend**: TypeScript/Node.js with dependency injection, LangChain integration
 - **Intuitive Frontend**: React/TypeScript with Tailwind CSS and modern UI components
 - **AI Integration**: Support for OpenAI and Anthropic LLM providers
+- **Intelligent Memory**: Session-based conversation memory with smart routing between memory and Slack search
 - **Slack Tools**: Comprehensive Slack API integration for message search, channel history, file access
 - **Production Ready**: Docker deployment, health monitoring, comprehensive logging
 

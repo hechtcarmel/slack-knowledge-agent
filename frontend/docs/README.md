@@ -150,7 +150,104 @@ frontend/
 
 ### Persistent State (localStorage)
 - **User Preferences**: Selected channels, UI preferences
-- **Session Data**: Current conversation, draft messages
+- **Session Management**: Unique session IDs for conversation continuity
+- **Conversation History**: Complete message history for memory synchronization
+
+## Memory and Session Management
+
+The frontend implements intelligent session management to maintain conversation context across browser sessions and page refreshes.
+
+### Session Architecture
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant SessionUtils
+    participant LocalStorage
+    participant ChatManager
+    participant Backend
+    
+    Browser->>SessionUtils: getOrCreateSessionId()
+    SessionUtils->>LocalStorage: Check existing session
+    alt Session exists
+        LocalStorage->>SessionUtils: Return session ID
+    else No session
+        SessionUtils->>SessionUtils: Generate new session ID
+        SessionUtils->>LocalStorage: Store session ID
+    end
+    
+    Browser->>ChatManager: Send message
+    ChatManager->>ChatManager: Add to conversation history
+    ChatManager->>Backend: POST with sessionId + history
+    Backend->>Backend: Sync memory with history
+    Backend->>ChatManager: AI response
+    ChatManager->>ChatManager: Update conversation history
+```
+
+### Key Components
+
+#### Session Utilities (`utils/session.ts`)
+```typescript
+// Generate unique session IDs
+export function generateSessionId(): string {
+  return 'session_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Get or create persistent session
+export function getOrCreateSessionId(): string {
+  const existingSessionId = localStorage.getItem('slack-knowledge-agent-session-id');
+  return existingSessionId || generateSessionId();
+}
+```
+
+#### Chat Manager (`hooks/useChatManager.ts`)
+```typescript
+export function useChatManager() {
+  const [sessionId, setSessionId] = useState(() => getOrCreateSessionId());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const sendMessage = async (message: string, channels: string[]) => {
+    // Send message with complete conversation history
+    const response = await sendMessageMutation.mutateAsync({
+      sessionId,                    // Session continuity
+      message,
+      channels,
+      conversationHistory: messages  // Full history for backend sync
+    });
+    
+    // Update local conversation state
+    setMessages(prev => [...prev, userMessage, aiMessage]);
+  };
+}
+```
+
+### Memory Features
+
+#### Conversation Continuity
+- **Session Persistence**: Session IDs persist across browser restarts
+- **History Synchronization**: Frontend sends complete message history to backend
+- **Context Preservation**: Backend maintains conversation memory using session ID
+
+#### Smart Memory Usage
+- **Memory-first Queries**: Questions about conversation ("what did I ask?") use memory
+- **Workspace Queries**: Questions about Slack content use search tools
+- **Hybrid Approach**: Mixed queries use both memory and search appropriately
+
+#### Session Management
+```typescript
+// Start new conversation (clear history and create new session)
+const startNewConversation = () => {
+  setMessages([]);
+  const newSessionId = clearSessionId();
+  setSessionId(newSessionId);
+};
+
+// Clear session and generate new one
+export function clearSessionId(): string {
+  localStorage.removeItem('slack-knowledge-agent-session-id');
+  return getOrCreateSessionId();
+}
+```
 
 ## API Integration
 
@@ -170,6 +267,8 @@ interface QueryRequest {
   query: string;
   channels: string[];
   options: ConversationOptions;
+  sessionId: string;                    // For conversation continuity
+  conversationHistory: ChatMessage[];  // For backend memory sync
 }
 
 // Response types

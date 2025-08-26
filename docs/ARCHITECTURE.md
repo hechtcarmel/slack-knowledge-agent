@@ -151,7 +151,8 @@ graph TB
 **Responsibilities**:
 - Query processing coordination
 - Provider management
-- Memory management
+- Session and memory management
+- Conversation history synchronization
 - Health monitoring
 
 #### Slack Service  
@@ -209,6 +210,101 @@ graph LR
 | `get_channel_info` | Get channel metadata | channel_id |
 | `list_files` | List files shared in channels | channels, file_types, limit |
 | `get_file_content` | Get content of text files | file_id |
+
+### Memory and Session Architecture
+
+The system implements sophisticated conversation memory management to maintain context across user interactions:
+
+```mermaid
+graph TB
+    subgraph "Frontend Session Management"
+        SessionUtils[Session Utilities]
+        LocalStorage[Browser LocalStorage]
+        ChatManager[Chat Manager]
+    end
+    
+    subgraph "Backend Memory System"
+        SessionManager[Session Manager]
+        SlackMemory[Slack Conversation Memory]
+        LangChainMemory[LangChain Memory Integration]
+    end
+    
+    subgraph "Agent Memory Usage"
+        Agent[LangChain Agent]
+        SystemPrompt[Enhanced System Prompt]
+        MemoryDecision[Memory vs Search Decision]
+    end
+    
+    SessionUtils --> LocalStorage
+    ChatManager --> SessionUtils
+    ChatManager --> SessionManager
+    SessionManager --> SlackMemory
+    SlackMemory --> LangChainMemory
+    LangChainMemory --> Agent
+    SystemPrompt --> MemoryDecision
+    Agent --> MemoryDecision
+```
+
+#### Memory Components
+
+##### Session Manager
+**Purpose**: Manages isolated conversation sessions with automatic cleanup
+**Features**:
+- Session-based memory isolation using unique session IDs
+- Automatic session expiration (configurable TTL)
+- Memory usage tracking and optimization
+- LRU cache eviction for resource management
+
+##### Slack Conversation Memory
+**Purpose**: LangChain-compatible memory implementation for conversation history
+**Features**:
+- Frontend history synchronization
+- Token and message count limits
+- Automatic memory compression when approaching limits
+- Context-aware conversation summaries
+
+##### Intelligent Memory Decision Making
+**Purpose**: Smart routing between memory and Slack search based on query type
+**Logic**:
+- **Conversation queries** ("what did I ask before?") → Use memory directly
+- **Workspace queries** ("find files about project X") → Use Slack search tools  
+- **Mixed queries** → Use both memory and search as appropriate
+
+#### Memory Flow
+
+```mermaid
+sequenceDiagram
+    participant Frontend
+    participant SessionManager
+    participant Memory
+    participant Agent
+    participant Tools
+    
+    Frontend->>SessionManager: Query with sessionId + history
+    SessionManager->>Memory: syncWithFrontendHistory()
+    SessionManager->>Agent: Create agent with memory
+    Agent->>Agent: Analyze query type
+    
+    alt Conversation Query
+        Agent->>Memory: Use conversation history
+        Agent->>Frontend: Answer from memory
+    else Slack Query
+        Agent->>Tools: Use Slack search tools
+        Tools->>Frontend: Answer from Slack data
+    end
+    
+    Agent->>Memory: Save new exchange
+```
+
+#### Configuration Options
+
+| Setting | Purpose | Default |
+|---------|---------|---------|
+| `sessionTTLMinutes` | Session expiration time | 120 minutes |
+| `memoryMaxMessages` | Max messages per session | 20 |
+| `memoryMaxTokens` | Max tokens per session | 2000 |
+| `maxSessions` | Global session limit | 100 |
+| `compressionEnabled` | Auto-compress old messages | true |
 
 ### Webhook Architecture
 
