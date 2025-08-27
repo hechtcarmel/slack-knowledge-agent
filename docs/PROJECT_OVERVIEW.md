@@ -60,7 +60,7 @@ graph TB
 - **Framework**: React 19 with TypeScript
 - **Build Tool**: Vite for fast development and builds
 - **Styling**: Tailwind CSS with Shadcn/ui components
-- **State Management**: TanStack Query for server state
+- **State Management**: TanStack Query for server state, Zustand for client state
 - **UI Components**: Modern, accessible component library
 - **Mobile**: Responsive design with mobile-first approach
 

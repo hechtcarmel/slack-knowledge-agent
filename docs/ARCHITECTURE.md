@@ -438,21 +438,29 @@ interface AppConfiguration {
 
 ```mermaid
 graph TB
-    App[App Component<br/>Main application]
+    App[App Component<br/>Error boundary + providers]
     
     subgraph "Layout Components"
-        Layout[Layout<br/>Application shell]
-        ErrorBoundary[Error Boundary<br/>Error handling]
+        AppLayout[App Layout<br/>Responsive shell]
+        Sidebar[Sidebar<br/>Desktop navigation]
+        MobileSidebar[Mobile Sidebar<br/>Mobile navigation]
+        MainContent[Main Content<br/>Chat content area]
     end
     
     subgraph "Feature Components"
-        ChatContainer[Chat Container<br/>Main chat interface]
+        ChatContainer[Chat Container<br/>Chat interface]
         ChannelSelector[Channel Selector<br/>Channel management]
         ChatMessage[Chat Message<br/>Message display]
         ChatInput[Chat Input<br/>Message input]
     end
     
-    subgraph "UI Components"
+    subgraph "State Integration"
+        ZustandStores[Zustand Stores<br/>UI, Channel, Error, Settings]
+        TanStackQuery[TanStack Query<br/>Server state]
+        ChatManager[Chat Manager Hook<br/>Session state]
+    end
+    
+    subgraph "UI Components (Shadcn/ui)"
         Button[Button]
         Input[Input]
         Card[Card]
@@ -460,14 +468,24 @@ graph TB
         Sheet[Sheet]
     end
     
-    App --> Layout
-    App --> ErrorBoundary
-    Layout --> ChatContainer
-    Layout --> ChannelSelector
+    App --> AppLayout
+    AppLayout --> Sidebar
+    AppLayout --> MobileSidebar
+    AppLayout --> MainContent
+    MainContent --> ChatContainer
+    Sidebar --> ChannelSelector
     ChatContainer --> ChatMessage
     ChatContainer --> ChatInput
+    
+    AppLayout --> ZustandStores
+    ChannelSelector --> ZustandStores
+    ChatContainer --> ChatManager
+    ChatContainer --> TanStackQuery
+    ChannelSelector --> TanStackQuery
+    
     ChannelSelector --> Button
     ChatContainer --> Card
+    MobileSidebar --> Sheet
 ```
 
 ### State Management Strategy
@@ -478,28 +496,37 @@ graph TB
 - **Background Updates**: Keep data fresh with background refetching
 - **Error Handling**: Integrated error handling and retry logic
 
-#### Local State (React State)
-- **UI State**: Loading states, form inputs, modal visibility
-- **Session State**: Selected channels, current conversation
-- **Persistence**: LocalStorage for user preferences
+#### Client State (Zustand Stores)
+- **UI Store**: Sidebar state, modal visibility, loading states, current view
+- **Channel Store**: Selected channels, channel preferences, search history
+- **Settings Store**: Theme, chat preferences, notifications, developer settings
+- **Error Store**: Centralized error management by category (global, chat, channels, api)
+- **Persistence**: Automatic persistence via Zustand middleware for selected state
+
+#### Session State (Custom Hooks)
+- **Chat Manager**: Conversation state, message history, session management
+- **Local Storage**: Session IDs and conversation continuity
 
 #### State Flow
 ```mermaid
 sequenceDiagram
     participant User
-    participant React
-    participant TanStack
+    participant Components
+    participant ZustandStores
+    participant TanStackQuery
     participant API
     participant Backend
     
-    User->>React: Interact with UI
-    React->>TanStack: Trigger query
-    TanStack->>API: HTTP request
+    User->>Components: Interact with UI
+    Components->>ZustandStores: Update client state
+    Components->>TanStackQuery: Trigger server queries
+    TanStackQuery->>API: HTTP request
     API->>Backend: Process request
     Backend->>API: Response
-    API->>TanStack: JSON response
-    TanStack->>React: Update state
-    React->>User: Update UI
+    API->>TanStackQuery: JSON response
+    TanStackQuery->>Components: Update with server state
+    ZustandStores->>Components: Update with client state
+    Components->>User: Update UI
 ```
 
 ### Component Communication Patterns

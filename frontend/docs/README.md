@@ -12,6 +12,7 @@ The frontend is a modern React application built with:
 - **Tailwind CSS**: Utility-first CSS framework for consistent styling
 - **Shadcn/ui**: High-quality, accessible component library
 - **TanStack Query**: Powerful server state management
+- **Zustand**: Lightweight client state management with persistence
 - **Lucide React**: Beautiful, consistent icon library
 
 ## Architecture
@@ -28,8 +29,8 @@ graph TB
     
     subgraph "State Management"
         Server[TanStack Query<br/>Server State]
-        Local[React State<br/>Local State]
-        Persist[localStorage<br/>Persistent State]
+        Zustand[Zustand Stores<br/>Client State]
+        Session[Custom Hooks<br/>Session State]
     end
     
     subgraph "API Integration"
@@ -44,8 +45,8 @@ graph TB
     Chat --> UI
     Channel --> UI
     Server --> Hooks
-    Local --> App
-    Persist --> Local
+    Zustand --> App
+    Session --> Hooks
     Hooks --> Client
     Client --> Types
 ```
@@ -100,6 +101,7 @@ frontend/
 | **Vite** | Build tool | 4.5+ |
 | **Tailwind CSS** | Styling | 4.1+ |
 | **TanStack Query** | Server state | 5.85+ |
+| **Zustand** | Client state | 5.0+ |
 | **Radix UI** | Accessibility primitives | Latest |
 | **Lucide React** | Icons | 0.540+ |
 
@@ -143,15 +145,17 @@ frontend/
 - **Query Responses**: AI-generated responses from backend
 - **Background Updates**: Automatic refetching and cache invalidation
 
-### Local State (React)
-- **UI State**: Loading states, modal visibility, form inputs
-- **Selection State**: Selected channels, current conversation
-- **Error State**: Client-side error messages and validation
+### Client State (Zustand Stores)
+- **UI Store**: Mobile sidebar state, current view, global loading, modal states
+- **Channel Store**: Selected channels, channel preferences, search history
+- **Settings Store**: Theme preferences, chat settings, notifications, developer mode
+- **Error Store**: Centralized error management by category (global, chat, channels, api)
+- **Automatic Persistence**: Selected stores persist to localStorage via Zustand middleware
 
-### Persistent State (localStorage)
-- **User Preferences**: Selected channels, UI preferences
+### Session State (Custom Hooks)
+- **Chat Manager**: Conversation state, message history, AI interaction
 - **Session Management**: Unique session IDs for conversation continuity
-- **Conversation History**: Complete message history for memory synchronization
+- **Memory Synchronization**: Frontend history sync with backend memory system
 
 ## Memory and Session Management
 

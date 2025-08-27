@@ -119,30 +119,64 @@ export function useSendMessageMutation() {
 }
 ```
 
-### React State for Local State
+### Zustand Stores for Client State
 ```typescript
-// Local component state
-const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-const [isModalOpen, setIsModalOpen] = useState(false);
+// Store definition with TypeScript interface
+export interface UIState {
+  isMobileSidebarOpen: boolean;
+  currentView: 'chat' | 'settings';
+  toggleMobileSidebar: () => void;
+  setCurrentView: (view: 'chat' | 'settings') => void;
+}
 
-// Persistent local state with localStorage
-useEffect(() => {
-  const saved = localStorage.getItem('selected-channels');
-  if (saved) {
-    setSelectedChannels(JSON.parse(saved));
-  }
-}, []);
+export const useUIStore = create<UIState>()(
+  devtools(
+    persist(
+      (set) => ({
+        isMobileSidebarOpen: false,
+        currentView: 'chat',
+        
+        toggleMobileSidebar: () =>
+          set((state) => ({ isMobileSidebarOpen: !state.isMobileSidebarOpen })),
+        
+        setCurrentView: (view) =>
+          set({ currentView: view }),
+      }),
+      {
+        name: 'ui-store',
+        partialize: (state) => ({
+          currentView: state.currentView,
+          // Don't persist modal states
+        }),
+      }
+    ),
+    { name: 'UI Store' }
+  )
+);
 
-useEffect(() => {
-  localStorage.setItem('selected-channels', JSON.stringify(selectedChannels));
-}, [selectedChannels]);
+// Usage in components
+const isMobileSidebarOpen = useUIStore((state) => state.isMobileSidebarOpen);
+const toggleMobileSidebar = useUIStore((state) => state.toggleMobileSidebar);
+```
+
+### React State for Local Component State
+```typescript
+// Use React state for component-specific, non-persistent state
+const [inputValue, setInputValue] = useState('');
+const [isFormValid, setIsFormValid] = useState(false);
+const [focusedItem, setFocusedItem] = useState<string | null>(null);
 ```
 
 ### Global State Strategy
-- **Server State**: TanStack Query handles caching, synchronization, background updates
-- **Local UI State**: React useState for component-specific state
-- **Persistent State**: localStorage for user preferences and session data
-- **Avoid**: Global state libraries (Redux, Zustand) - not needed for this app size
+- **Server State**: TanStack Query handles API data, caching, synchronization, background updates
+- **Client State**: Zustand stores for shared UI state, settings, errors, channel selection
+  - `useUIStore`: Sidebar, modals, loading states, current view
+  - `useChannelStore`: Selected channels, preferences, search history
+  - `useSettingsStore`: Theme, chat settings, notifications, developer mode
+  - `useErrorStore`: Centralized error management by category
+- **Session State**: Custom hooks (useChatManager) for conversation management
+- **Local Component State**: React useState for component-specific, non-shared state
+- **Persistence**: Zustand persist middleware for automatic localStorage integration
 
 ## UI and Styling Guidelines
 
