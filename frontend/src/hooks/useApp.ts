@@ -4,7 +4,7 @@ import { useChatManager } from './useChatManager';
 import { useChannelSelection } from './useChannelSelection';
 import { useResponsiveLayout } from './useResponsiveLayout';
 import { useErrorHandler } from './useErrorHandler';
-import { ConversationOptions } from '@/types/chat';
+import { ConversationOptions, ChatMessage } from '@/types/chat';
 
 /**
  * Main app hook that orchestrates all app-level state and business logic
@@ -20,17 +20,24 @@ export function useApp() {
   // Channel selection management
   const channelManager = useChannelSelection();
 
+  // Stable callback functions for chat manager
+  const onMessageSent = useCallback((message: ChatMessage) => {
+    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
+  }, [dispatch]);
+
+  const onResponseReceived = useCallback((message: ChatMessage) => {
+    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
+  }, [dispatch]);
+
+  const onChatError = useCallback((error: Error) => {
+    dispatch({ type: 'SET_CHAT_ERROR', payload: error.message });
+  }, [dispatch]);
+
   // Chat management with integrated error handling
   const chatManager = useChatManager({
-    onMessageSent: message => {
-      dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
-    },
-    onResponseReceived: message => {
-      dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
-    },
-    onError: error => {
-      dispatch({ type: 'SET_CHAT_ERROR', payload: error.message });
-    },
+    onMessageSent,
+    onResponseReceived,
+    onError: onChatError,
   });
 
   // Sync mobile sidebar state with layout manager

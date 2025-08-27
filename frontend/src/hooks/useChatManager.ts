@@ -24,10 +24,10 @@ export function useChatManager(options: ChatManagerOptions = {}) {
   const [sessionId, setSessionId] = useState(() => getOrCreateSessionId());
 
   // Default conversation options
-  const defaultOptions: ConversationOptions = {
+  const defaultOptions: ConversationOptions = useMemo(() => ({
     includeFiles: false,
     includeThreads: true,
-  };
+  }), []);
 
   // Send message to AI
   const sendMessage = useCallback(
@@ -105,7 +105,7 @@ export function useChatManager(options: ChatManagerOptions = {}) {
         options.onError?.(error as Error);
       }
     },
-    [sendMessageMutation, handleError, options, defaultOptions]
+    [sendMessageMutation, handleError, options.onMessageSent, options.onResponseReceived, options.onError, defaultOptions, sessionId]
   );
 
   // Create new conversation (clear messages and create new session)

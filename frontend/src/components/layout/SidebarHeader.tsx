@@ -1,4 +1,3 @@
-import React from 'react';
 import slackLogo from '@/assets/slack-logo.png';
 
 /**

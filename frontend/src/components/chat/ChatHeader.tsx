@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Plus, 
@@ -93,7 +93,7 @@ export function ChatHeader({
             }`} 
           />
           <span className="text-muted-foreground">
-            {health?.services?.llm?.provider || 'LLM'}
+            {health?.services?.llm?.currentProvider || 'LLM'}
           </span>
         </div>
       </div>

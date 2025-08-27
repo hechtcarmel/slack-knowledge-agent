@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChatInput } from './ChatInput';
 import { ConversationOptions } from '@/types/chat';
 

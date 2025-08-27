@@ -1,4 +1,3 @@
-import React from 'react';
 import { SidebarHeader } from './SidebarHeader';
 import { ChannelSelectorContainer } from '@/components/channels/ChannelSelectorContainer';
 import ErrorBoundary from '@/components/ErrorBoundary';

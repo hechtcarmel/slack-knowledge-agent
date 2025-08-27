@@ -1,26 +1,19 @@
 /// <reference types="vite/client" />
 
+// Declare module for PNG imports
 declare module '*.png' {
-  const value: string;
-  export default value;
+  const src: string;
+  export default src;
 }
 
-declare module '*.jpg' {
-  const value: string;
-  export default value;
+// Extend ImportMeta interface if needed
+interface ImportMetaEnv {
+  readonly VITE_API_URL?: string;
+  readonly VITE_APP_TITLE?: string;
+  readonly DEV: boolean;
+  readonly PROD: boolean;
 }
 
-declare module '*.jpeg' {
-  const value: string;
-  export default value;
-}
-
-declare module '*.gif' {
-  const value: string;
-  export default value;
-}
-
-declare module '*.svg' {
-  const value: string;
-  export default value;
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }

@@ -38,7 +38,7 @@ class ApiClient {
         // Try to parse as API error first
         try {
           const errorData = ApiErrorSchema.parse(data);
-          throw new Error(errorData.error.message);
+          throw new Error(errorData.error);
         } catch {
           // Fallback to generic error
           throw new Error(
@@ -82,10 +82,10 @@ class ApiClient {
     );
 
     if (response.status === 'error') {
-      throw new Error(response.message);
+      throw new Error(response.error || 'Failed to fetch channels');
     }
 
-    return response.data.channels;
+    return response.data?.channels || [];
   }
 
   async submitQuery(query: QueryRequest): Promise<QueryResponse> {

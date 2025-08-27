@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChannelSelector } from '@/components/ChannelSelector';
 import { useApp } from '@/hooks/useApp';
 import { AlertCircle } from 'lucide-react';
@@ -23,14 +22,6 @@ export function ChannelSelectorContainer({ isMobile = false }: ChannelSelectorCo
     }
   };
 
-  const handleChannelToggle = (channelId: string) => {
-    channels.toggleChannel(channelId);
-    
-    // Auto-close mobile sidebar after selection on mobile
-    if (isMobile) {
-      handleMobileAction();
-    }
-  };
 
   if (channels.error) {
     return (

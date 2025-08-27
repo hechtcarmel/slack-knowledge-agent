@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AlertCircle } from 'lucide-react';

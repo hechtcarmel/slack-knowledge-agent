@@ -130,19 +130,28 @@ export interface QueryResponse {
 }
 
 export interface HealthStatus {
-  status: 'healthy' | 'unhealthy';
+  status: string;
   timestamp: string;
+  uptime: number;
+  version: string;
   services: {
     slack: {
-      status: 'connected' | 'disconnected' | 'error';
-      lastCheck: string;
-      error?: string;
+      status: string;
+      lastCheck?: string;
+      channels?: number;
+      cacheStatus?: string;
+      tokens?: string;
     };
     llm: {
-      status: 'connected' | 'disconnected' | 'error';
-      provider: string;
-      lastCheck: string;
-      error?: string;
+      status: string;
+      lastCheck?: string;
+      currentProvider?: string;
+      availableProviders?: string[];
+      toolsCount?: number;
+      memory?: {
+        enabled: boolean;
+        messageCount: number;
+      };
     };
   };
 }
