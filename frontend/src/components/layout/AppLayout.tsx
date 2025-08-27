@@ -1,14 +1,17 @@
 import { Sidebar } from './Sidebar';
 import { MobileSidebar } from './MobileSidebar';
 import { MainContent } from './MainContent';
-import { useApp } from '@/hooks/useApp';
+import { useUIStore } from '@/stores';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 /**
  * Main application layout component
  * Handles responsive layout, sidebar management, and overall app structure
  */
 export function AppLayout() {
-  const { layout, toggleMobileSidebar, layout: { isMobile, isDesktop } } = useApp();
+  const isMobileSidebarOpen = useUIStore((state) => state.isMobileSidebarOpen);
+  const toggleMobileSidebar = useUIStore((state) => state.toggleMobileSidebar);
+  const { isMobile, isDesktop } = useResponsiveLayout();
 
   return (
     <div className="h-screen bg-background">
@@ -16,7 +19,7 @@ export function AppLayout() {
         {/* Mobile: Hamburger Menu & Sheet Sidebar */}
         {isMobile && (
           <MobileSidebar
-            isOpen={layout.isMobileSidebarOpen}
+            isOpen={isMobileSidebarOpen}
             onOpenChange={toggleMobileSidebar}
           />
         )}

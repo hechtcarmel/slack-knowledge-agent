@@ -1,5 +1,6 @@
 import { ChannelSelector } from '@/components/ChannelSelector';
-import { useApp } from '@/hooks/useApp';
+import { useChannelSelection } from '@/hooks/useChannelSelection';
+import { useUIStore } from '@/stores';
 import { AlertCircle } from 'lucide-react';
 
 interface ChannelSelectorContainerProps {
@@ -8,17 +9,18 @@ interface ChannelSelectorContainerProps {
 
 /**
  * Container component for channel selection
- * Bridges between the ChannelSelector presentation component and app state
+ * Bridges between the ChannelSelector presentation component and channel state
  */
 export function ChannelSelectorContainer({ isMobile = false }: ChannelSelectorContainerProps) {
-  const { channels, handleMobileAction } = useApp();
+  const channels = useChannelSelection();
+  const closeMobileSidebar = useUIStore((state) => state.closeMobileSidebar);
 
   const handleSelectionChange = (selectedChannels: string[]) => {
     channels.selectChannels(selectedChannels);
     
     // Auto-close mobile sidebar when channels are selected
     if (isMobile) {
-      handleMobileAction();
+      closeMobileSidebar();
     }
   };
 

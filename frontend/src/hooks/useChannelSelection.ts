@@ -1,17 +1,14 @@
-import { useCallback, useMemo } from 'react';
-import { useLocalStorage } from './useLocalStorage';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useChannelsQuery } from './api';
-import { useErrorHandler } from './useErrorHandler';
+import { useChannelStore, useErrorStore } from '@/stores';
 import { Channel } from '@/types/api';
 
-const STORAGE_KEY = 'slack-agent-selected-channels';
-
 /**
- * Custom hook for managing channel selection with localStorage persistence
+ * Custom hook for managing channel selection with Zustand store persistence
  * Handles validation, filtering, and synchronization with available channels
  */
 export function useChannelSelection() {
-  const { handleError } = useErrorHandler();
+  const setError = useErrorStore((state) => state.setError);
 
   // Get available channels from API
   const {
@@ -20,17 +17,14 @@ export function useChannelSelection() {
     error: channelsError,
   } = useChannelsQuery();
 
-  // Manage selected channel IDs with localStorage persistence
-  const [selectedChannelIds, setSelectedChannelIds] = useLocalStorage<string[]>(
-    STORAGE_KEY,
-    [],
-    {
-      onError: error => handleError(error, { 
-        component: 'useChannelSelection',
-        action: 'localStorage_access' 
-      }),
-    }
-  );
+  // Get channel selection state and actions from Zustand store
+  const selectedChannelIds = useChannelStore((state) => state.selectedChannelIds);
+  const toggleChannel = useChannelStore((state) => state.toggleChannel);
+  const setSelectedChannels = useChannelStore((state) => state.setSelectedChannels);
+  const clearSelectedChannels = useChannelStore((state) => state.clearSelectedChannels);
+  const selectChannel = useChannelStore((state) => state.selectChannel);
+  const deselectChannel = useChannelStore((state) => state.deselectChannel);
+  const isChannelSelected = useChannelStore((state) => state.isChannelSelected);
 
   // Validate and filter selected channels to ensure they still exist
   const validatedSelectedIds = useMemo(() => {
@@ -41,12 +35,12 @@ export function useChannelSelection() {
     );
   }, [selectedChannelIds, allChannels]);
 
-  // Update selectedChannelIds if validation removed invalid channels
-  const updateValidatedSelection = useCallback(() => {
-    if (validatedSelectedIds.length !== selectedChannelIds.length) {
-      setSelectedChannelIds(validatedSelectedIds);
+  // Auto-update selection to remove invalid channels
+  useEffect(() => {
+    if (allChannels.length > 0 && validatedSelectedIds.length !== selectedChannelIds.length) {
+      setSelectedChannels(validatedSelectedIds);
     }
-  }, [validatedSelectedIds, selectedChannelIds, setSelectedChannelIds]);
+  }, [validatedSelectedIds, selectedChannelIds, allChannels.length, setSelectedChannels]);
 
   // Get selected channel objects with full details
   const selectedChannels: Channel[] = useMemo(() => {
@@ -54,20 +48,6 @@ export function useChannelSelection() {
       validatedSelectedIds.includes(channel.id)
     );
   }, [allChannels, validatedSelectedIds]);
-
-  // Toggle channel selection
-  const toggleChannel = useCallback(
-    (channelId: string) => {
-      setSelectedChannelIds(prev => {
-        if (prev.includes(channelId)) {
-          return prev.filter(id => id !== channelId);
-        } else {
-          return [...prev, channelId];
-        }
-      });
-    },
-    [setSelectedChannelIds]
-  );
 
   // Select multiple channels
   const selectChannels = useCallback(
@@ -78,59 +58,33 @@ export function useChannelSelection() {
       );
 
       if (validIds.length !== channelIds.length) {
-        handleError(
-          new Error(
-            `Some channel IDs are invalid: ${channelIds.length - validIds.length} out of ${channelIds.length}`
-          ),
-          { action: 'bulk_select' }
-        );
+        setError('channels', `Some channel IDs are invalid: ${channelIds.length - validIds.length} out of ${channelIds.length}`);
       }
 
-      setSelectedChannelIds(validIds);
+      setSelectedChannels(validIds);
     },
-    [allChannels, setSelectedChannelIds, handleError]
+    [allChannels, setSelectedChannels, setError]
   );
-
-  // Clear all selections
-  const clearSelection = useCallback(() => {
-    setSelectedChannelIds([]);
-  }, [setSelectedChannelIds]);
 
   // Add channel to selection
   const addChannel = useCallback(
     (channelId: string) => {
       if (!allChannels.some(channel => channel.id === channelId)) {
-        handleError(
-          new Error(`Channel ${channelId} not found in available channels`),
-          { action: 'add_channel' }
-        );
+        setError('channels', `Channel ${channelId} not found in available channels`);
         return;
       }
 
-      setSelectedChannelIds(prev => {
-        if (!prev.includes(channelId)) {
-          return [...prev, channelId];
-        }
-        return prev;
-      });
+      selectChannel(channelId);
     },
-    [allChannels, setSelectedChannelIds, handleError]
+    [allChannels, selectChannel, setError]
   );
 
   // Remove channel from selection
   const removeChannel = useCallback(
     (channelId: string) => {
-      setSelectedChannelIds(prev => prev.filter(id => id !== channelId));
+      deselectChannel(channelId);
     },
-    [setSelectedChannelIds]
-  );
-
-  // Check if channel is selected
-  const isChannelSelected = useCallback(
-    (channelId: string) => {
-      return validatedSelectedIds.includes(channelId);
-    },
-    [validatedSelectedIds]
+    [deselectChannel]
   );
 
   // Get selection statistics
@@ -147,9 +101,6 @@ export function useChannelSelection() {
     [allChannels.length, validatedSelectedIds.length]
   );
 
-  // Auto-update validated selection when channels change
-  updateValidatedSelection();
-
   return {
     // Channel data
     allChannels,
@@ -165,7 +116,7 @@ export function useChannelSelection() {
     selectChannels,
     addChannel,
     removeChannel,
-    clearSelection,
+    clearSelection: clearSelectedChannels,
     isChannelSelected,
 
     // Statistics

@@ -1,40 +1,48 @@
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInputContainer } from './ChatInputContainer';
-import { useApp } from '@/hooks/useApp';
+import { useChatManager } from '@/hooks/useChatManager';
+import { useSelectedChannels, useChatError } from '@/stores';
 
 /**
- * Main chat container component - completely refactored
- * Now uses centralized state management and focused sub-components
+ * Main chat container component - uses Zustand stores and chat manager
+ * Now with direct store access for optimal performance
  */
 export function ChatContainer() {
-  const { chat, channels, error, sendMessage, startNewConversation, isLoading } = useApp();
+  const chat = useChatManager();
+  const selectedChannelIds = useSelectedChannels();
+  const chatError = useChatError();
+
+  const sendMessage = async (message: string) => {
+    if (selectedChannelIds.length === 0) return;
+    await chat.sendMessage(message, selectedChannelIds);
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
       {/* Header */}
       <ChatHeader
         conversation={chat.currentConversation}
-        onNewConversation={startNewConversation}
-        isLoading={isLoading}
-        selectedChannelsCount={channels.selectedChannelIds.length}
+        onNewConversation={chat.startNewConversation}
+        isLoading={chat.isLoading}
+        selectedChannelsCount={selectedChannelIds.length}
       />
 
       {/* Messages Area */}
       <ChatMessages
         messages={chat.messages}
         isAiTyping={chat.isAiTyping}
-        isLoading={isLoading}
-        error={error.chat}
+        isLoading={chat.isLoading}
+        error={chatError}
       />
 
       {/* Input Area */}
       <ChatInputContainer
         onSendMessage={sendMessage}
-        isLoading={isLoading || chat.isAiTyping}
-        disabled={channels.selectedChannelIds.length === 0}
+        isLoading={chat.isLoading || chat.isAiTyping}
+        disabled={selectedChannelIds.length === 0}
         placeholder={
-          channels.selectedChannelIds.length === 0
+          selectedChannelIds.length === 0
             ? "Select channels to start chatting..."
             : chat.isAiTyping
               ? "AI is responding..."

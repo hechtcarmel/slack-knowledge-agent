@@ -1,105 +1,36 @@
-import { useEffect, useCallback } from 'react';
-import { useAppState } from '@/contexts/AppStateContext';
+import { useCallback } from 'react';
+import { useUIStore, useErrorStore, useChannelStore } from '@/stores';
 import { useChatManager } from './useChatManager';
 import { useChannelSelection } from './useChannelSelection';
 import { useResponsiveLayout } from './useResponsiveLayout';
-import { useErrorHandler } from './useErrorHandler';
-import { ConversationOptions, ChatMessage } from '@/types/chat';
+import { ConversationOptions } from '@/types/chat';
 
 /**
- * Main app hook that orchestrates all app-level state and business logic
- * This is the primary hook that components should use to interact with app state
+ * Simplified app hook - now just coordinates between stores and managers
+ * Components should primarily use stores directly for better performance
  */
 export function useApp() {
-  const { state, dispatch } = useAppState();
-  const { handleError } = useErrorHandler();
+  // Store selectors - only what this hook actually needs
+  const toggleMobileSidebar = useUIStore((state) => state.toggleMobileSidebar);
+  const closeMobileSidebar = useUIStore((state) => state.closeMobileSidebar);
+  const setError = useErrorStore((state) => state.setError);
+  const clearAllErrors = useErrorStore((state) => state.clearAllErrors);
+  const selectedChannelIds = useChannelStore((state) => state.selectedChannelIds);
 
-  // Layout management
+  // Layout management (keep existing responsive behavior)
   const layoutManager = useResponsiveLayout();
 
   // Channel selection management
   const channelManager = useChannelSelection();
 
-  // Stable callback functions for chat manager
-  const onMessageSent = useCallback((message: ChatMessage) => {
-    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
-  }, [dispatch]);
-
-  const onResponseReceived = useCallback((message: ChatMessage) => {
-    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: message });
-  }, [dispatch]);
-
-  const onChatError = useCallback((error: Error) => {
-    dispatch({ type: 'SET_CHAT_ERROR', payload: error.message });
-  }, [dispatch]);
-
-  // Chat management with integrated error handling
-  const chatManager = useChatManager({
-    onMessageSent,
-    onResponseReceived,
-    onError: onChatError,
-  });
-
-  // Sync mobile sidebar state with layout manager
-  useEffect(() => {
-    if (layoutManager.isMobileSidebarOpen !== state.ui.isMobileSidebarOpen) {
-      dispatch({
-        type: 'SET_MOBILE_SIDEBAR',
-        payload: layoutManager.isMobileSidebarOpen,
-      });
-    }
-  }, [
-    layoutManager.isMobileSidebarOpen,
-    state.ui.isMobileSidebarOpen,
-    dispatch,
-  ]);
-
-  // Sync loading states
-  useEffect(() => {
-    const isLoading = chatManager.isLoading || channelManager.isLoading;
-    if (isLoading !== state.ui.isLoading) {
-      dispatch({ type: 'SET_LOADING', payload: isLoading });
-    }
-  }, [
-    chatManager.isLoading,
-    channelManager.isLoading,
-    state.ui.isLoading,
-    dispatch,
-  ]);
-
-  // Handle channel selection errors
-  useEffect(() => {
-    if (channelManager.error) {
-      const errorMessage =
-        channelManager.error instanceof Error
-          ? channelManager.error.message
-          : 'Failed to load channels';
-      dispatch({ type: 'SET_CHANNELS_ERROR', payload: errorMessage });
-    } else {
-      dispatch({ type: 'SET_CHANNELS_ERROR', payload: null });
-    }
-  }, [channelManager.error, dispatch]);
-
-  // Handle chat errors
-  useEffect(() => {
-    if (chatManager.error) {
-      const errorMessage =
-        chatManager.error instanceof Error
-          ? chatManager.error.message
-          : 'Chat error occurred';
-      dispatch({ type: 'SET_CHAT_ERROR', payload: errorMessage });
-    } else {
-      dispatch({ type: 'SET_CHAT_ERROR', payload: null });
-    }
-  }, [chatManager.error, dispatch]);
+  // Chat management (simplified - no context integration)
+  const chatManager = useChatManager();
 
   // Main chat action - sends message with current channel selection
   const sendMessage = useCallback(
     async (message: string, options?: Partial<ConversationOptions>) => {
-      if (channelManager.selectedChannelIds.length === 0) {
-        handleError(new Error('Please select at least one channel'), {
-          action: 'send_message',
-        });
+      if (selectedChannelIds.length === 0) {
+        setError('chat', 'Please select at least one channel');
         return;
       }
 
@@ -109,31 +40,16 @@ export function useApp() {
         ...options,
       };
 
-      await chatManager.sendMessage(
-        message,
-        channelManager.selectedChannelIds,
-        conversationOptions
-      );
+      await chatManager.sendMessage(message, selectedChannelIds, conversationOptions);
     },
-    [channelManager.selectedChannelIds, chatManager, handleError]
+    [selectedChannelIds, chatManager, setError]
   );
 
   // Start new conversation
   const startNewConversation = useCallback(() => {
     chatManager.startNewConversation();
-    dispatch({ type: 'CLEAR_CHAT_MESSAGES' });
-    dispatch({ type: 'CLEAR_ALL_ERRORS' });
-  }, [chatManager, dispatch]);
-
-  // Toggle mobile sidebar
-  const toggleMobileSidebar = useCallback(() => {
-    layoutManager.toggleMobileSidebar();
-  }, [layoutManager]);
-
-  // Close mobile sidebar
-  const closeMobileSidebar = useCallback(() => {
-    layoutManager.closeMobileSidebar();
-  }, [layoutManager]);
+    clearAllErrors();
+  }, [chatManager, clearAllErrors]);
 
   // Handle mobile actions (actions that should close sidebar on mobile)
   const handleMobileAction = useCallback(
@@ -143,43 +59,7 @@ export function useApp() {
     [layoutManager]
   );
 
-  // Clear specific error
-  const clearError = useCallback(
-    (errorType: 'global' | 'chat' | 'channels' | 'all') => {
-      switch (errorType) {
-        case 'global':
-          dispatch({ type: 'SET_GLOBAL_ERROR', payload: null });
-          break;
-        case 'chat':
-          dispatch({ type: 'SET_CHAT_ERROR', payload: null });
-          break;
-        case 'channels':
-          dispatch({ type: 'SET_CHANNELS_ERROR', payload: null });
-          break;
-        case 'all':
-          dispatch({ type: 'CLEAR_ALL_ERRORS' });
-          break;
-      }
-    },
-    [dispatch]
-  );
-
-  // Get combined error state
-  const hasAnyError = !!(
-    state.error.global ||
-    state.error.chat ||
-    state.error.channels
-  );
-  const currentError =
-    state.error.global || state.error.chat || state.error.channels;
-
   return {
-    // State
-    ui: state.ui,
-    error: state.error,
-    hasAnyError,
-    currentError,
-
     // Layout
     layout: layoutManager,
 
@@ -187,13 +67,7 @@ export function useApp() {
     channels: channelManager,
 
     // Chat
-    chat: {
-      ...chatManager,
-      messages: chatManager.messages,
-      currentConversation: chatManager.currentConversation,
-      isAiTyping: chatManager.isAiTyping,
-      isLoading: chatManager.isLoading,
-    },
+    chat: chatManager,
 
     // Actions
     sendMessage,
@@ -201,12 +75,5 @@ export function useApp() {
     toggleMobileSidebar,
     closeMobileSidebar,
     handleMobileAction,
-    clearError,
-
-    // Combined loading state
-    isLoading: state.ui.isLoading,
-
-    // Direct dispatch for advanced usage
-    dispatch,
   };
 }

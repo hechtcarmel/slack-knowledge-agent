@@ -1,20 +1,17 @@
-import { AppStateProvider } from '@/contexts/AppStateContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 /**
- * Main App component - completely refactored for readability and maintainability
+ * Main App component - streamlined with Zustand state management
  * 
  * This component is now focused solely on:
- * 1. Providing app-level context
- * 2. Error boundary wrapping  
- * 3. Layout orchestration
+ * 1. Error boundary wrapping  
+ * 2. Layout orchestration
  * 
- * All business logic has been extracted to:
- * - Custom hooks (useApp, useChatManager, useChannelSelection, etc.)
- * - Service layers (StorageService, NotificationService)
- * - Context providers (AppStateProvider)
- * - Focused components (AppLayout, Sidebar, ChatContainer, etc.)
+ * State management is handled by:
+ * - Zustand stores (UI, Error, Channel, Settings)
+ * - TanStack Query (Server state)
+ * - Custom hooks (useChatManager for session state)
  */
 function App() {
   return (
@@ -24,9 +21,7 @@ function App() {
         // In production, log to error reporting service
       }}
     >
-      <AppStateProvider>
-        <AppLayout />
-      </AppStateProvider>
+      <AppLayout />
     </ErrorBoundary>
   );
 }

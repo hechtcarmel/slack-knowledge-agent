@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSendMessageMutation } from './chat';
-import { useErrorHandler } from './useErrorHandler';
+import { useErrorStore } from '@/stores';
 import { ChatMessage, ConversationOptions, Conversation } from '@/types/chat';
 import { getOrCreateSessionId, clearSessionId } from '@/utils/session';
 
@@ -15,7 +15,8 @@ export interface ChatManagerOptions {
  * Handles message sending, conversation state, and AI interaction
  */
 export function useChatManager(options: ChatManagerOptions = {}) {
-  const { handleError } = useErrorHandler();
+  const setError = useErrorStore((state) => state.setError);
+  const clearError = useErrorStore((state) => state.clearError);
   const sendMessageMutation = useSendMessageMutation();
 
   // Chat state
@@ -37,22 +38,19 @@ export function useChatManager(options: ChatManagerOptions = {}) {
       conversationOptions: ConversationOptions = defaultOptions
     ) => {
       if (!message.trim()) {
-        handleError(new Error('Message cannot be empty'), {
-          component: 'useChatManager',
-          action: 'send_message',
-        });
+        setError('chat', 'Message cannot be empty');
         return;
       }
 
       if (channels.length === 0) {
-        handleError(new Error('Please select at least one channel'), {
-          component: 'useChatManager',
-          action: 'send_message',
-        });
+        setError('chat', 'Please select at least one channel');
         return;
       }
 
       try {
+        // Clear previous chat errors
+        clearError('chat');
+
         // Create user message
         const userMessage: ChatMessage = {
           id: `user-${Date.now()}`,
@@ -98,14 +96,11 @@ export function useChatManager(options: ChatManagerOptions = {}) {
         setIsAiTyping(false);
         const errorMessage =
           error instanceof Error ? error.message : 'Failed to send message';
-        handleError(new Error(errorMessage), { 
-          component: 'useChatManager',
-          action: 'send_message' 
-        });
+        setError('chat', errorMessage);
         options.onError?.(error as Error);
       }
     },
-    [sendMessageMutation, handleError, options.onMessageSent, options.onResponseReceived, options.onError, defaultOptions, sessionId]
+    [sendMessageMutation, setError, clearError, options.onMessageSent, options.onResponseReceived, options.onError, defaultOptions, sessionId, messages]
   );
 
   // Create new conversation (clear messages and create new session)
