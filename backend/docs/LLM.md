@@ -106,10 +106,13 @@ export class SlackKnowledgeAgent {
 ### System Prompt Design
 
 The agent uses a carefully crafted system prompt that:
-- Defines the agent's role and capabilities
+- Defines the agent's role and capabilities with emphasis on comprehensive investigation
 - Lists available tools with usage instructions
 - Provides parameter format specifications
 - Emphasizes proper tool usage patterns
+- **Mandates thorough investigation over quick responses**
+- **Requires multi-source validation for all claims**
+- **Prevents premature conclusions with built-in checkpoints**
 
 ```typescript
 const systemMessage = `You are a Slack Knowledge Agent that helps users find information from their Slack workspace.
@@ -132,8 +135,33 @@ IMPORTANT:
 - For search_messages: pass channels as an array, e.g., ["C09B8CNEQNR"] 
 - For single channel tools: use channel_id as a string
 
-Always use tools to gather information before responding. If you find relevant information, quote it with context (user and timestamp).`;
+Always use tools to gather information before responding. Never settle for first results - always validate across multiple sources. If you find relevant information, quote it with context (user and timestamp).`;
 ```
+
+## Investigation Standards
+
+### Comprehensive Analysis Approach
+
+The system prompt has been enhanced with robust investigation standards to ensure thorough analysis:
+
+#### Core Investigation Principles:
+- **Multi-Source Validation**: Every claim must be supported by multiple sources when possible
+- **Cross-Channel Verification**: Check relevant channels beyond the most obvious ones  
+- **Temporal Coverage**: Investigate both recent and historical information
+- **Thread Completeness**: For questions found, always check complete thread conversations for answers
+- **Contradiction Resolution**: When sources disagree, present all perspectives with clear attribution
+
+#### Investigation Completeness Framework:
+- **Minimum Requirements**: 2-3 different sources for validation
+- **Quality Indicators**: Identify conflicting information, evolution over time, context completeness
+- **Continuation Triggers**: Single sources, partial context, time gaps, missing key players
+- **Transparency Requirements**: Report sources checked, coverage scope, confidence level, limitations
+
+#### Preventing Premature Conclusions:
+- **Investigation Checkpoints**: 7-point checklist before finalizing responses
+- **Red Flags System**: Warning indicators for incomplete investigation  
+- **Continuation Triggers**: Clear criteria for when to continue investigating
+- **Error Recovery**: Strategies for search failures and incomplete results
 
 ## Tool System
 
