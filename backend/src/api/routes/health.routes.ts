@@ -114,6 +114,41 @@ async function checkLLMStatus() {
     const providers = llmService.getAvailableProviders();
     const stats = llmService.getStats();
 
+    // Check if no providers are available
+    if (providers.length === 0) {
+      const config = getConfig();
+      const apiKeys = {
+        openai: {
+          configured: !!config.OPENAI_API_KEY,
+          valid: config.OPENAI_API_KEY?.startsWith('sk-') || false,
+        },
+        anthropic: {
+          configured: !!config.ANTHROPIC_API_KEY,
+          valid: config.ANTHROPIC_API_KEY?.startsWith('sk-ant-') || false,
+        },
+      };
+
+      const missingKeys: string[] = [];
+      if (!apiKeys.openai.configured || !apiKeys.openai.valid) {
+        missingKeys.push('OPENAI_API_KEY (sk-)');
+      }
+      if (!apiKeys.anthropic.configured || !apiKeys.anthropic.valid) {
+        missingKeys.push('ANTHROPIC_API_KEY (sk-ant-)');
+      }
+
+      return {
+        status: 'disconnected' as const,
+        lastCheck,
+        error: health.details?.error || 'No valid LLM providers available',
+        apiKeys,
+        missingKeys,
+        requirements: {
+          openai: 'Required for OpenAI GPT models',
+          anthropic: 'Required for Anthropic Claude models',
+        },
+      };
+    }
+
     return {
       status:
         health.status === 'healthy' || health.status === 'degraded'

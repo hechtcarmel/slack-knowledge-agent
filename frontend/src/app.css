@@ -325,11 +325,6 @@
     font-weight: 600;
   }
   
-  .prose p {
-    margin-top: 1.25em;
-    margin-bottom: 1.25em;
-  }
-  
   .prose a {
     color: hsl(var(--primary));
     text-decoration: underline;

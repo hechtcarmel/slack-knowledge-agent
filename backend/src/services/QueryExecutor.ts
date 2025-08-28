@@ -189,8 +189,14 @@ export class QueryExecutor implements IInitializableService {
     sessionId?: string
   ): Promise<QueryResult> {
     // Determine provider and model
-    const provider =
-      config.provider || this.providerManager.getCurrentProvider();
+    const currentProvider = this.providerManager.getCurrentProvider();
+    if (!currentProvider && !config.provider) {
+      throw new LLMError(
+        'No LLM providers available - check API keys configuration',
+        'NO_PROVIDERS_AVAILABLE'
+      );
+    }
+    const provider = config.provider || currentProvider!;
     const model =
       config.model || this.providerManager.getDefaultModelForProvider(provider);
 
@@ -266,8 +272,14 @@ export class QueryExecutor implements IInitializableService {
     sessionId?: string
   ): AsyncIterable<StreamChunk> {
     // Determine provider and model
-    const provider =
-      config.provider || this.providerManager.getCurrentProvider();
+    const currentProvider = this.providerManager.getCurrentProvider();
+    if (!currentProvider && !config.provider) {
+      throw new LLMError(
+        'No LLM providers available - check API keys configuration',
+        'NO_PROVIDERS_AVAILABLE'
+      );
+    }
+    const provider = config.provider || currentProvider!;
     const model =
       config.model || this.providerManager.getDefaultModelForProvider(provider);
 

@@ -16,8 +16,8 @@ const EnvSchema = z.object({
   SLACK_SIGNING_SECRET: z.string().min(1),
   SLACK_APP_TOKEN: z.string().startsWith('xapp-').optional(),
 
-  // LLM
-  OPENAI_API_KEY: z.string().startsWith('sk-'),
+  // LLM (both optional to allow graceful degradation)
+  OPENAI_API_KEY: z.string().startsWith('sk-').optional(),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-').optional(),
   DEFAULT_LLM_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
   LLM_MODEL: z.string().default('gpt-5'),

@@ -100,8 +100,14 @@ export class AgentManager implements IInitializableService, IDisposableService {
     model?: string,
     sessionMemory?: SlackConversationMemory
   ): Promise<SlackKnowledgeAgent> {
-    const targetProvider =
-      provider || this.providerManager.getCurrentProvider();
+    const currentProvider = this.providerManager.getCurrentProvider();
+    if (!currentProvider && !provider) {
+      throw new LLMError(
+        'No LLM providers available - check API keys configuration',
+        'NO_PROVIDERS_AVAILABLE'
+      );
+    }
+    const targetProvider = provider || currentProvider!;
     const targetModel =
       model || this.providerManager.getDefaultModelForProvider(targetProvider);
 
@@ -197,8 +203,14 @@ export class AgentManager implements IInitializableService, IDisposableService {
    * Force refresh an agent (removes from cache)
    */
   public refreshAgent(provider?: LLMProvider, model?: string): void {
-    const targetProvider =
-      provider || this.providerManager.getCurrentProvider();
+    const currentProvider = this.providerManager.getCurrentProvider();
+    if (!currentProvider && !provider) {
+      throw new LLMError(
+        'No LLM providers available - check API keys configuration',
+        'NO_PROVIDERS_AVAILABLE'
+      );
+    }
+    const targetProvider = provider || currentProvider!;
     const targetModel =
       model || this.providerManager.getDefaultModelForProvider(targetProvider);
     const cacheKey = `${targetProvider}:${targetModel}`;

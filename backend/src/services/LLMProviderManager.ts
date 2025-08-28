@@ -69,9 +69,26 @@ export class LLMProviderManager
       // Validate all providers
       await this.validateAllProviders();
 
-      // Ensure we have at least one valid provider
+      // Log warning if no providers were configured at all
+      if (this.providers.size === 0) {
+        this.logger.warn('No LLM providers configured - check API key configuration', {
+          openaiConfigured: !!this.config.openaiApiKey,
+          anthropicConfigured: !!this.config.anthropicApiKey,
+          openaiValid: this.config.openaiApiKey?.startsWith('sk-') || false,
+          anthropicValid: this.config.anthropicApiKey?.startsWith('sk-ant-') || false,
+        });
+        // Don't set currentProvider to anything invalid
+        return;
+      }
+
+      // Log warning if no valid providers instead of throwing error
       if (this.validatedProviders.size === 0) {
-        throw new LLMError('No valid LLM providers configured', 'NO_PROVIDERS');
+        this.logger.warn('No valid LLM providers configured - service will be unavailable', {
+          configuredProviders: Array.from(this.providers.keys()),
+          availableProviders: [],
+        });
+        // Don't throw error - allow service to initialize but be marked as unhealthy
+        return;
       }
 
       // Set current provider to a valid one
@@ -99,6 +116,14 @@ export class LLMProviderManager
    * Get a provider instance
    */
   public getProvider(provider?: LLMProvider): ILLMProvider {
+    // Check if any providers are available
+    if (this.validatedProviders.size === 0) {
+      throw new LLMError(
+        'No valid LLM providers available - check API keys configuration',
+        'NO_PROVIDERS_AVAILABLE'
+      );
+    }
+
     const targetProvider = provider || this.currentProvider;
     const providerInstance = this.providers.get(targetProvider);
 
@@ -137,7 +162,10 @@ export class LLMProviderManager
   /**
    * Get current provider
    */
-  public getCurrentProvider(): LLMProvider {
+  public getCurrentProvider(): LLMProvider | null {
+    if (this.validatedProviders.size === 0) {
+      return null;
+    }
     return this.currentProvider;
   }
 

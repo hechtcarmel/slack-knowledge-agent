@@ -215,6 +215,20 @@ export class LLMService implements ILLMService {
       const executorStats = this.queryExecutor.getStats();
       const agentStats = this.agentManager.getStats();
 
+      // If no providers are available, mark as unhealthy but don't crash
+      if (providerHealth.details.healthyProviders === 0) {
+        return {
+          status: 'unhealthy',
+          details: {
+            error: 'No valid LLM providers available - check API keys configuration',
+            providers: providerHealth.details,
+            executor: executorStats,
+            agents: agentStats,
+            initialized: this.isInitialized,
+          },
+        };
+      }
+
       return {
         status: providerHealth.status,
         details: {
@@ -235,7 +249,7 @@ export class LLMService implements ILLMService {
   /**
    * Get current provider information
    */
-  public getCurrentProvider(): LLMProvider {
+  public getCurrentProvider(): LLMProvider | null {
     this.ensureInitialized();
     return this.providerManager.getCurrentProvider();
   }
@@ -245,7 +259,7 @@ export class LLMService implements ILLMService {
    */
   public getStats(): {
     providers: Record<string, boolean>;
-    currentProvider: LLMProvider;
+    currentProvider: LLMProvider | null;
     activeQueries: number;
     totalQueries: number;
     cachedAgents: number;

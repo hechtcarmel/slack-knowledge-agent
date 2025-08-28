@@ -24,7 +24,7 @@ export interface SlackConfig {
 }
 
 export interface LLMConfig {
-  openaiApiKey: string;
+  openaiApiKey?: string;
   anthropicApiKey?: string;
   defaultProvider: 'openai' | 'anthropic';
   defaultModel: string;
