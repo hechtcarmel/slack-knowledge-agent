@@ -6,6 +6,7 @@ export interface EmbedConfig {
   theme?: 'light' | 'dark' | 'system';
   readonly?: boolean;
   title?: string;
+  initialMessage?: string;
 }
 
 /**
@@ -17,6 +18,7 @@ export interface EmbedConfig {
  * - theme=light|dark|system (optional theme override)
  * - readonly=true|false (optional readonly mode)
  * - title=Custom Title (optional custom title)
+ * - initialMessage=Welcome message (optional initial AI greeting)
  * 
  * @example
  * // URL: ?embed=true&channels=general,dev-team&theme=dark&title=Support%20Chat
@@ -59,12 +61,16 @@ export function useEmbedConfig(): EmbedConfig {
     // Parse optional title parameter (URL decoded)
     const title = urlParams.get('title') || undefined;
     
+    // Parse optional initial message parameter (URL decoded)
+    const initialMessage = urlParams.get('initialMessage') || undefined;
+    
     return {
       isEmbedMode: true,
       channels,
       theme,
       readonly,
       title,
+      initialMessage,
     };
   }, []); // Empty dependency array since URL params don't change during component lifecycle
 }

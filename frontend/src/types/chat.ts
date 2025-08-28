@@ -25,6 +25,7 @@ export interface ChatMessage {
     model?: string;
     intermediateSteps?: any[];
     toolCalls?: number;
+    isInitialMessage?: boolean;
     relevantPermalinks?: string[];
     permalinkReferences?: Array<{
       url: string;

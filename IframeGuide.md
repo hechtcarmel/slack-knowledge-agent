@@ -34,6 +34,7 @@ The iframe embed mode is controlled via URL query parameters:
 | `theme` | System default | `light`, `dark`, `system` | Override the theme |
 | `title` | None | Any string | Custom title shown in the header |
 | `readonly` | `false` | `true`, `false` | Enable/disable message sending |
+| `initialMessage` | None | Any string | Initial AI greeting message (UI-only) |
 
 ## Examples
 
@@ -61,6 +62,18 @@ The iframe embed mode is controlled via URL query parameters:
         width="800" height="600"></iframe>
 ```
 
+### With Initial Greeting Message
+```html
+<iframe src="https://your-slack-agent.com/?embed=true&channels=support&initialMessage=Hello!%20I'm%20here%20to%20help%20you%20find%20information%20from%20our%20team's%20knowledge%20base.%20What%20would%20you%20like%20to%20know?"
+        width="800" height="600"></iframe>
+```
+
+### Complete Example with All Parameters
+```html
+<iframe src="https://your-slack-agent.com/?embed=true&channels=support,general&title=Help%20Center&theme=light&initialMessage=Welcome!%20How%20can%20I%20assist%20you%20today?"
+        width="800" height="600"></iframe>
+```
+
 ## Channel Configuration
 
 ### Using Channel Names
@@ -80,6 +93,67 @@ Both formats can be mixed:
 ```
 ?channels=general,C1234567890,support
 ```
+
+## Initial Greeting Messages
+
+You can configure the chat to show an initial greeting message that appears as if the AI agent wrote it. This is perfect for welcoming users and explaining what the chat can help with.
+
+### How It Works
+- The message appears **1 second** after the iframe loads
+- It's displayed as an AI assistant message (with bot avatar)
+- It's **UI-only** - never sent to the backend or processed
+- Always appears as the first message in the chat
+- Works great for setting expectations and providing guidance
+
+### Configuration
+Use the `initialMessage` parameter with URL-encoded text:
+
+```html
+<!-- Simple greeting -->
+<iframe src="https://your-slack-agent.com/?embed=true&channels=support&initialMessage=Welcome!%20How%20can%20I%20help%20you%20today?"
+        width="800" height="600"></iframe>
+
+<!-- Detailed explanation -->
+<iframe src="https://your-slack-agent.com/?embed=true&channels=general,support&initialMessage=Hello!%20I'm%20your%20AI%20assistant.%20I%20can%20search%20through%20our%20team's%20Slack%20conversations%20to%20help%20answer%20your%20questions.%20What%20would%20you%20like%20to%20know?"
+        width="800" height="600"></iframe>
+```
+
+### Best Practices for Initial Messages
+- **Keep it concise** but informative
+- **Explain what the chat can do** (e.g., "I can search our team's knowledge base")
+- **Ask an open question** to encourage engagement
+- **Set expectations** about response types
+- **Use friendly, helpful tone**
+
+### Examples by Use Case
+
+**Customer Support:**
+```
+Hello! I'm here to help you find answers from our support team's knowledge base. What issue can I help you with today?
+```
+
+**Internal Knowledge Base:**
+```
+Hi! I can search through all our team channels to find information, discussions, and solutions. What would you like to know about?
+```
+
+**Project Documentation:**
+```
+Welcome to the Project Alpha knowledge base! Ask me anything about our development process, decisions, or technical discussions.
+```
+
+**Sales/Marketing:**
+```
+Hello! I can help you find information from our sales and marketing teams. What are you looking for?
+```
+
+### URL Encoding
+Remember to URL-encode your messages. Common characters:
+- Space: `%20`
+- Question mark: `%3F`
+- Exclamation: `%21`
+- Comma: `%2C`
+- Apostrophe: `%27`
 
 ## Responsive Design
 
