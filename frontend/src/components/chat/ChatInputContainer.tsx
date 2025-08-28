@@ -31,7 +31,7 @@ export function ChatInputContainer({
   };
 
   return (
-    <div className="flex-shrink-0 p-2 lg:p-4 border-t border-border">
+    <div className="flex-shrink-0 p-3 sm:p-4 lg:p-4 border-t border-border">
       <div className="max-w-4xl mx-auto w-full">
         <ChatInput
           onSendMessage={handleSendMessage}

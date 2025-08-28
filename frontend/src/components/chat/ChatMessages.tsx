@@ -33,7 +33,7 @@ export function ChatMessages({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {hasMessages ? (
-        <ScrollArea className="flex-1 p-2 lg:p-4">
+        <ScrollArea className="flex-1 p-3 sm:p-4 lg:p-4">
           <div className="space-y-2 max-w-4xl mx-auto w-full">
             {messages.map((message) => (
               <ErrorBoundary

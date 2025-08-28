@@ -1,5 +1,5 @@
 // Re-export all stores from a central location
-export { useUIStore } from './useUIStore';
+export { useUIStore, useIsEmbedMode, useEmbedModeConfig, useEmbedModeChannels } from './useUIStore';
 export { useErrorStore, useGlobalError, useChatError, useChannelsError, useApiError, useHasErrors, useErrorCount } from './useErrorStore';
 export { useChannelStore, useSelectedChannels, useSelectedChannelCount, useHasSelectedChannels } from './useChannelStore';
 export { useSettingsStore, useTheme, useChatSettings, useNotificationSettings, useDeveloperMode, useEffectiveTheme } from './useSettingsStore';

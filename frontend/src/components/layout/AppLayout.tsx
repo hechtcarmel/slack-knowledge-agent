@@ -1,18 +1,29 @@
 import { Sidebar } from './Sidebar';
 import { MobileSidebar } from './MobileSidebar';
 import { MainContent } from './MainContent';
-import { useUIStore } from '@/stores';
+import { EmbedLayout } from './EmbedLayout';
+import { useUIStore, useIsEmbedMode } from '@/stores';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 /**
  * Main application layout component
- * Handles responsive layout, sidebar management, and overall app structure
+ * Handles responsive layout, sidebar management, embed mode, and overall app structure
+ * 
+ * - In embed mode: Renders EmbedLayout (no sidebar, iframe-optimized)
+ * - In normal mode: Renders standard layout with responsive sidebar
  */
 export function AppLayout() {
   const isMobileSidebarOpen = useUIStore((state) => state.isMobileSidebarOpen);
   const toggleMobileSidebar = useUIStore((state) => state.toggleMobileSidebar);
   const { isMobile, isDesktop } = useResponsiveLayout();
+  const isEmbedMode = useIsEmbedMode();
 
+  // Render embed layout for iframe mode
+  if (isEmbedMode) {
+    return <EmbedLayout />;
+  }
+
+  // Render normal layout for standalone mode
   return (
     <div className="h-screen bg-background">
       <div className="h-full flex">

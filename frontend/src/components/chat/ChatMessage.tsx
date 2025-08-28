@@ -51,7 +51,7 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
 
   return (
     <div className={cn(
-      'flex gap-3 group',
+      'flex gap-3 group w-full min-w-0',
       isUser ? 'justify-end' : 'justify-start'
     )}>
       {/* Avatar */}
@@ -63,12 +63,13 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
 
       {/* Message Content */}
       <div className={cn(
-        'max-w-[95%] lg:max-w-[80%] flex flex-col',
+        'max-w-[70%] xs:max-w-[75%] sm:max-w-[70%] lg:max-w-[80%] flex flex-col min-w-0',
         isUser ? 'items-end' : 'items-start'
       )}>
         {/* Message Bubble */}
         <div className={cn(
-          'rounded-lg px-3 lg:px-4 py-0 shadow-sm relative',
+          'rounded-lg px-3 lg:px-4 py-3 shadow-sm relative break-words overflow-hidden hyphens-auto',
+          'word-break-break-all [word-break:break-word] [overflow-wrap:break-word]',
           isUser 
             ? 'bg-primary text-primary-foreground' 
             : 'bg-card border border-border',
@@ -92,7 +93,7 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
           </Button>
 
           {/* Message Content */}
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none min-w-0 overflow-wrap-anywhere break-words hyphens-auto [word-break:break-word]">
             {isUser ? (
               <p className="m-0 text-primary-foreground">{message.content}</p>
             ) : (

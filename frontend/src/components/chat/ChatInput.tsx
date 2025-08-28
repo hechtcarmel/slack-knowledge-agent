@@ -112,13 +112,14 @@ export function ChatInput({
             </div>
           </div>
 
-          {/* Send Button */}
+          {/* Send Button - Responsive: Icon only on small screens */}
           <Button
             onClick={handleSubmit}
             disabled={!canSend}
             size="lg"
             className={cn(
-              'h-[50px] px-6 rounded-lg',
+              'h-[50px] rounded-lg',
+              'w-[50px] sm:w-auto px-0 sm:px-6', // Square on small screens, auto width on large
               'bg-primary hover:bg-primary/90 text-primary-foreground',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'shadow-lg hover:shadow-xl transition-all duration-200',
@@ -127,13 +128,13 @@ export function ChatInput({
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Sending...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="ml-2 hidden sm:inline">Sending...</span>
               </>
             ) : (
               <>
-                <Send className="h-4 w-4 mr-2" />
-                Send
+                <Send className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Send</span>
               </>
             )}
           </Button>

@@ -23,6 +23,10 @@ export interface ChannelState {
   selectAllChannels: (channelIds: string[]) => void;
   selectChannelsByPattern: (pattern: string, allChannels: Channel[]) => void;
   
+  // Embed mode operations
+  setEmbedChannels: (channelIds: string[]) => void;
+  isEmbedMode: () => boolean;
+  
   // Preferences
   updateChannelPreference: (channelId: string, updates: Partial<ChannelPreference>) => void;
   addToSearchHistory: (channelId: string, query: string) => void;
@@ -41,6 +45,12 @@ export const useChannelStore = create<ChannelState>()(
         
         selectChannel: (channelId) =>
           set((state) => {
+            // Prevent manual selection in embed mode
+            if (get().isEmbedMode()) {
+              console.warn('Cannot manually select channels in embed mode');
+              return state;
+            }
+            
             if (state.selectedChannelIds.includes(channelId)) return state;
             return {
               selectedChannelIds: [...state.selectedChannelIds, channelId],
@@ -56,11 +66,25 @@ export const useChannelStore = create<ChannelState>()(
           }),
         
         deselectChannel: (channelId) =>
-          set((state) => ({
-            selectedChannelIds: state.selectedChannelIds.filter((id) => id !== channelId),
-          })),
+          set((state) => {
+            // Prevent manual deselection in embed mode
+            if (get().isEmbedMode()) {
+              console.warn('Cannot manually deselect channels in embed mode');
+              return state;
+            }
+            
+            return {
+              selectedChannelIds: state.selectedChannelIds.filter((id) => id !== channelId),
+            };
+          }),
         
         toggleChannel: (channelId) => {
+          // Prevent manual toggle in embed mode
+          if (get().isEmbedMode()) {
+            console.warn('Cannot manually toggle channels in embed mode');
+            return;
+          }
+          
           const { selectedChannelIds } = get();
           if (selectedChannelIds.includes(channelId)) {
             get().deselectChannel(channelId);
@@ -134,6 +158,19 @@ export const useChannelStore = create<ChannelState>()(
             };
           }),
         
+        // Embed mode operations
+        setEmbedChannels: (channelIds) =>
+          set({
+            selectedChannelIds: channelIds,
+            channelPreferences: {}, // Reset preferences for embed mode
+          }),
+        
+        isEmbedMode: () => {
+          // Check if we're in embed mode by looking for embed URL parameter
+          if (typeof window === 'undefined') return false;
+          return new URLSearchParams(window.location.search).get('embed') === 'true';
+        },
+        
         getChannelSearchHistory: (channelId) =>
           get().channelPreferences[channelId]?.searchHistory || [],
         
@@ -142,10 +179,23 @@ export const useChannelStore = create<ChannelState>()(
       }),
       {
         name: 'channel-store',
-        partialize: (state) => ({
-          selectedChannelIds: state.selectedChannelIds,
-          channelPreferences: state.channelPreferences,
-        }),
+        partialize: (state) => {
+          // Don't persist channel selections in embed mode
+          const isEmbedMode = typeof window !== 'undefined' && 
+            new URLSearchParams(window.location.search).get('embed') === 'true';
+          
+          if (isEmbedMode) {
+            return {
+              selectedChannelIds: [],
+              channelPreferences: {},
+            };
+          }
+          
+          return {
+            selectedChannelIds: state.selectedChannelIds,
+            channelPreferences: state.channelPreferences,
+          };
+        },
       }
     ),
     { name: 'Channel Store' }
