@@ -115,7 +115,7 @@ export interface EnvironmentVariables {
   SLACK_APP_TOKEN?: string;
 
   // LLM
-  OPENAI_API_KEY: string;
+  OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
   DEFAULT_LLM_PROVIDER: 'openai' | 'anthropic';
   LLM_MODEL: string;

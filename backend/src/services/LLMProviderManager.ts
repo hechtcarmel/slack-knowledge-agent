@@ -15,7 +15,7 @@ import {
  * LLM provider manager configuration
  */
 export interface LLMProviderConfig {
-  openaiApiKey: string;
+  openaiApiKey?: string;
   anthropicApiKey?: string;
   defaultProvider: LLMProvider;
   defaultModel: string;

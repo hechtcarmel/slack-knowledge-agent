@@ -100,7 +100,7 @@ backend/
 │   │   └── tools/         # Slack-specific tools
 │   ├── services/          # Business logic services
 │   ├── utils/             # Shared utilities
-│   └── server_new.ts      # Application entry point
+│   └── server.ts      # Application entry point
 ├── tests/                 # Test suites
 ├── config/               # Configuration files
 └── docs/                 # This documentation

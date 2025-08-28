@@ -5,9 +5,9 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server_new.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server_new.js",
+    "start": "node dist/server.js",
     "test": "NODE_ENV=test jest --testPathPattern=tests/",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

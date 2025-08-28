@@ -242,7 +242,7 @@ export class AppConfig {
       },
       llm: {
         ...this.config.llm,
-        openaiApiKey: this.maskToken(this.config.llm.openaiApiKey),
+        openaiApiKey: this.config.llm.openaiApiKey ? this.maskToken(this.config.llm.openaiApiKey) : undefined,
         anthropicApiKey: this.config.llm.anthropicApiKey
           ? '[MASKED]'
           : undefined,
@@ -433,7 +433,7 @@ export class AppConfig {
   /**
    * Mask sensitive tokens for logging
    */
-  private maskToken(token: string): string {
+  private maskToken(token: string | undefined): string {
     if (!token || token.length < 8) {
       return '[INVALID_TOKEN]';
     }

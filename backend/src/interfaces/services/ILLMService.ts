@@ -139,7 +139,7 @@ export interface ILLMService extends IInitializableService, IHealthCheckable {
    */
   getStats(): {
     providers: Record<string, boolean>;
-    currentProvider: LLMProvider;
+    currentProvider: LLMProvider | null;
     activeQueries: number;
     totalQueries: number;
     cachedAgents: number;
