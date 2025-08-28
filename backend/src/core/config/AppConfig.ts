@@ -42,7 +42,7 @@ const EnvironmentSchema = z.object({
   OPENAI_API_KEY: z.string().startsWith('sk-'),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-').optional(),
   DEFAULT_LLM_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
-  LLM_MODEL: z.string().default('gpt-4o-mini'),
+  LLM_MODEL: z.string().default('gpt-4o'),
   MAX_CONTEXT_TOKENS: z.string().transform(Number).default('8000'),
 
   // Query limits
