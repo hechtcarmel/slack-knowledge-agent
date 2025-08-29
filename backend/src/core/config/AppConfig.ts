@@ -317,12 +317,8 @@ export class AppConfig {
    * Determine CORS origins based on environment
    */
   private determineCorsOrigins(environment: string): string[] {
-    if (environment === 'production') {
-      // In production, this should come from environment variables
-      const origins = process.env.CORS_ORIGINS;
-      return origins ? origins.split(',').map(o => o.trim()) : [];
-    }
-    return [...CONFIG_DEFAULTS.server.corsOrigins];
+    // Accept all origins always
+    return ['*'];
   }
 
   /**

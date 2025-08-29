@@ -321,8 +321,11 @@ export class ApplicationFactory {
               styleSrc: ["'self'", "'unsafe-inline'"],
               scriptSrc: ["'self'"],
               imgSrc: ["'self'", 'data:', 'https:'],
+              frameAncestors: ["'self'", '*'],
             },
           },
+          // Remove X-Frame-Options to allow iframe embedding
+          frameguard: false,
         })
       );
     }
@@ -330,7 +333,7 @@ export class ApplicationFactory {
     // CORS configuration
     app.use(
       cors({
-        origin: serverConfig.corsOrigins,
+        origin: true, // Accept all origins
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
