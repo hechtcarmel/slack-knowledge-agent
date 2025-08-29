@@ -1,45 +1,31 @@
 # Multi-stage Dockerfile for Slack Knowledge Agent
 
-# Frontend build stage
-FROM node:20-alpine AS frontend-builder
+# Build stage
+FROM node:20-alpine AS builder
 
-WORKDIR /app/frontend
-
-# Install pnpm
-RUN npm install -g pnpm@8.15.0
-
-# Copy frontend package files
-COPY frontend/package.json ./
-COPY frontend/pnpm-lock.yaml* ./
-
-# Install frontend dependencies
-RUN pnpm install
-
-# Copy frontend source code
-COPY frontend/ .
-
-# Build the frontend
-RUN pnpm run build
-
-# Backend build stage
-FROM node:20-alpine AS backend-builder
-
-WORKDIR /app/backend
+WORKDIR /app
 
 # Install pnpm
 RUN npm install -g pnpm@8.15.0
 
-# Copy backend package files
-COPY backend/package.json ./
-COPY backend/pnpm-lock.yaml* ./
+# Copy root package files
+COPY package.json pnpm-lock.yaml* ./
 
-# Install backend dependencies
+# Install root dependencies
 RUN pnpm install
 
-# Copy backend source code
-COPY backend/ .
+# Copy and install frontend dependencies
+COPY frontend/package.json frontend/pnpm-lock.yaml* ./frontend/
+RUN cd frontend && pnpm install
 
-# Build the backend
+# Copy and install backend dependencies
+COPY backend/package.json backend/pnpm-lock.yaml* ./backend/
+RUN cd backend && pnpm install
+
+# Copy all source code
+COPY . .
+
+# Build both frontend and backend using the unified build system
 RUN pnpm run build
 
 # Production stage
@@ -51,19 +37,14 @@ WORKDIR /app
 RUN npm install -g pnpm@8.15.0
 
 # Copy backend package files
-COPY backend/package.json ./
-COPY backend/pnpm-lock.yaml* ./
+COPY backend/package.json backend/pnpm-lock.yaml* ./
 
 # Install production dependencies only
 RUN pnpm install --prod && pnpm store prune
 
-# Copy built backend application from builder stage
-COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/config ./config
-
-# Copy built frontend from frontend builder stage to public directory
-# The backend serves static files from 'public' directory
-COPY --from=frontend-builder /app/frontend/dist ./public
+# Copy built application from builder stage
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/public ./public
 
 # Create logs directory for the application (if file logging is enabled)
 RUN mkdir -p /app/logs
@@ -76,31 +57,10 @@ RUN addgroup -g 1001 -S nodejs && \
 # Switch to non-root user
 USER nodejs
 
-# Environment variables (matching .env.example defaults)
+# Environment variables (only required ones from .env.example)
 ENV NODE_ENV=production \
     PORT=8000 \
-    # LLM Configuration (matching .env.example)
-    DEFAULT_LLM_PROVIDER=openai \
-    LLM_MODEL=gpt-4o \
-    MAX_CONTEXT_TOKENS=8000 \
-    # Query Configuration (matching .env.example)
-    MAX_HISTORY_DAYS=90 \
-    DEFAULT_QUERY_LIMIT=50 \
-    MAX_QUERY_LIMIT=200 \
-    # Memory Configuration (matching .env.example)
-    MEMORY_ENABLED=true \
-    MEMORY_MAX_TOKENS=200000 \
-    MEMORY_MAX_MESSAGES=200 \
-    MEMORY_SESSION_TTL_MINUTES=60 \
-    MEMORY_CLEANUP_INTERVAL_MINUTES=10 \
-    # Session Configuration (matching .env.example)
-    SESSION_MAX_SESSIONS=1000 \
-    SESSION_MAX_SESSIONS_PER_USER=10 \
-    # Logging Configuration (Docker-specific: console only, no file logging)
-    LOG_LEVEL=info \
-    FILE_LOGGING=false \
-    CONSOLE_LOGGING=true \
-    LOG_DIR=/app/logs
+    LLM_MODEL=gpt-4o
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

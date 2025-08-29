@@ -11,7 +11,6 @@ import {
   getAppConfig,
   validateAppConfiguration,
 } from '../config/AppConfig.js';
-import { ConfigManager } from '../config/ConfigManager.js';
 import { Logger } from '@/utils/logger.js';
 import { SlackApiClient } from '@/services/api/SlackApiClient.js';
 import { SlackService } from '@/services/SlackService.js';
@@ -133,11 +132,6 @@ export class ApplicationFactory {
     // Register configuration
     container.registerInstance(SERVICE_TOKENS.APP_CONFIG, appConfig);
 
-    // Register configuration manager
-    container.registerSingleton(
-      SERVICE_TOKENS.CHANNEL_CONFIG_MANAGER,
-      ConfigManager
-    );
 
     // Register Slack API client
     container.registerFactory(

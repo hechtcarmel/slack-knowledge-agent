@@ -126,7 +126,6 @@ export interface IContainer {
 export const SERVICE_TOKENS = {
   // Configuration
   APP_CONFIG: Symbol('AppConfig'),
-  CHANNEL_CONFIG_MANAGER: Symbol('ChannelConfigManager'),
 
   // Logging
   LOGGER_FACTORY: Symbol('LoggerFactory'),

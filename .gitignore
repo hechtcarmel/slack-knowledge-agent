@@ -58,6 +58,9 @@ config/channels.json
 frontend/dist/
 frontend/build/
 
+# Backend public (contains built frontend)
+backend/public/
+
 # Testing
 .nyc_output/
 

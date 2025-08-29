@@ -42,13 +42,6 @@ export interface FileContent {
   filetype: string;
 }
 
-export interface ChannelConfig {
-  channels: Array<{
-    id: string;
-    name: string;
-    description: string;
-  }>;
-}
 
 export interface QueryRequest {
   question: string;
