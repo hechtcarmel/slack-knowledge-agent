@@ -9,7 +9,6 @@ export interface ServerConfig {
   port: number;
   environment: 'development' | 'production' | 'test';
   corsOrigins: string[];
-  requestTimeout: number;
   bodyLimit: string;
 }
 
@@ -17,7 +16,6 @@ export interface SlackConfig {
   botToken: string;
   userToken: string;
   signingSecret: string;
-  appToken?: string;
   maxRetries: number;
   retryBackoffMs: number;
   channelCacheExpiryMs: number;
@@ -42,20 +40,8 @@ export interface QueryConfig {
   queryTimeoutMs: number;
 }
 
-export interface LoggingConfig {
-  level: string;
-  enableConsole: boolean;
-  enableFileLogging: boolean;
-  logDirectory: string;
-  maxFileSize: string;
-  maxFiles: number;
-}
-
 export interface SecurityConfig {
   enableHelmet: boolean;
-  enableRateLimit: boolean;
-  rateLimitWindowMs: number;
-  rateLimitMaxRequests: number;
   trustedProxies: string[];
 }
 
@@ -74,8 +60,6 @@ export interface MemoryConfig {
   maxMessages: number;
   sessionTTLMinutes: number;
   cleanupIntervalMinutes: number;
-  compressionEnabled: boolean;
-  compressionThreshold: number;
 }
 
 export interface SessionConfig {
@@ -91,7 +75,6 @@ export interface AppConfiguration {
   slack: SlackConfig;
   llm: LLMConfig;
   query: QueryConfig;
-  logging: LoggingConfig;
   security: SecurityConfig;
   webhook: WebhookConfig;
   memory: MemoryConfig;
@@ -105,14 +88,12 @@ export interface EnvironmentVariables {
   // Server
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
-  REQUEST_TIMEOUT: number;
   BODY_LIMIT: string;
 
   // Slack
   SLACK_BOT_TOKEN: string;
   SLACK_USER_TOKEN: string;
   SLACK_SIGNING_SECRET: string;
-  SLACK_APP_TOKEN?: string;
 
   // LLM
   OPENAI_API_KEY?: string;
@@ -125,11 +106,6 @@ export interface EnvironmentVariables {
   MAX_HISTORY_DAYS: number;
   DEFAULT_QUERY_LIMIT: number;
   MAX_QUERY_LIMIT: number;
-
-  // Security
-  ENABLE_RATE_LIMIT: boolean;
-  RATE_LIMIT_WINDOW_MS: number;
-  RATE_LIMIT_MAX_REQUESTS: number;
 
   // Webhook
   WEBHOOK_ENABLE_SIGNATURE_VALIDATION: boolean;
@@ -145,8 +121,6 @@ export interface EnvironmentVariables {
   MEMORY_MAX_MESSAGES: number;
   MEMORY_SESSION_TTL_MINUTES: number;
   MEMORY_CLEANUP_INTERVAL_MINUTES: number;
-  MEMORY_COMPRESSION_ENABLED: boolean;
-  MEMORY_COMPRESSION_THRESHOLD: number;
 
   // Session
   SESSION_MAX_SESSIONS: number;
@@ -170,7 +144,6 @@ export const CONFIG_DEFAULTS = {
     port: 3000,
     environment: 'development' as const,
     corsOrigins: ['http://localhost:5173', 'http://localhost:3000'],
-    requestTimeout: 30000,
     bodyLimit: '10mb',
   },
   slack: {
@@ -193,19 +166,8 @@ export const CONFIG_DEFAULTS = {
     maxConcurrentQueries: 5,
     queryTimeoutMs: 120000,
   },
-  logging: {
-    level: 'info',
-    enableConsole: true,
-    enableFileLogging: true,
-    logDirectory: './logs',
-    maxFileSize: '20m',
-    maxFiles: 14,
-  },
   security: {
     enableHelmet: true,
-    enableRateLimit: false,
-    rateLimitWindowMs: 15 * 60 * 1000, // 15 minutes
-    rateLimitMaxRequests: 100,
     trustedProxies: [],
   },
   webhook: {
@@ -222,8 +184,6 @@ export const CONFIG_DEFAULTS = {
     maxMessages: 20,
     sessionTTLMinutes: 60,
     cleanupIntervalMinutes: 10,
-    compressionEnabled: true,
-    compressionThreshold: 0.8,
   },
   session: {
     maxSessions: 1000,

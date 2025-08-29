@@ -6,23 +6,41 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '6173:3000'
+      - '8000:8000'
     environment:
       - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3000
+      - PORT=8000
+      # Slack Configuration (Required - must be provided via .env file)
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_USER_TOKEN=${SLACK_USER_TOKEN}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      # LLM Configuration (At least one API key required)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-openai}
-      - LLM_MODEL=${LLM_MODEL:-gpt-5}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
       - MAX_CONTEXT_TOKENS=${MAX_CONTEXT_TOKENS:-8000}
+      # Query Configuration
       - MAX_HISTORY_DAYS=${MAX_HISTORY_DAYS:-90}
       - DEFAULT_QUERY_LIMIT=${DEFAULT_QUERY_LIMIT:-50}
       - MAX_QUERY_LIMIT=${MAX_QUERY_LIMIT:-200}
+      # Memory Configuration (matching .env.example)
+      - MEMORY_ENABLED=${MEMORY_ENABLED:-true}
+      - MEMORY_MAX_TOKENS=${MEMORY_MAX_TOKENS:-200000}
+      - MEMORY_MAX_MESSAGES=${MEMORY_MAX_MESSAGES:-200}
+      - MEMORY_SESSION_TTL_MINUTES=${MEMORY_SESSION_TTL_MINUTES:-60}
+      - MEMORY_CLEANUP_INTERVAL_MINUTES=${MEMORY_CLEANUP_INTERVAL_MINUTES:-10}
+      # Session Configuration (matching .env.example)
+      - SESSION_MAX_SESSIONS=${SESSION_MAX_SESSIONS:-1000}
+      - SESSION_MAX_SESSIONS_PER_USER=${SESSION_MAX_SESSIONS_PER_USER:-10}
+      # Logging Configuration (Docker-optimized)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - FILE_LOGGING=${FILE_LOGGING:-false}
+      - CONSOLE_LOGGING=${CONSOLE_LOGGING:-true}
+      - LOG_DIR=/app/logs
     volumes:
       - ./config:/app/config:ro
+      - logs:/app/logs
     networks:
       - slack-agent-network
     restart: unless-stopped
@@ -32,7 +50,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+          "require('http').get('http://localhost:8000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
         ]
       interval: 30s
       timeout: 10s
@@ -51,3 +69,7 @@ services:
 networks:
   slack-agent-network:
     driver: bridge
+
+volumes:
+  logs:
+    driver: local

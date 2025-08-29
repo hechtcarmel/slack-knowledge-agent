@@ -10,7 +10,6 @@ import {
   SlackConfig,
   LLMConfig,
   QueryConfig,
-  LoggingConfig,
   SecurityConfig,
   WebhookConfig,
   MemoryConfig,
@@ -28,74 +27,44 @@ const EnvironmentSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
-  PORT: z.string().transform(Number).default('3000'),
-  REQUEST_TIMEOUT: z.string().transform(Number).default('30000'),
+  PORT: z.coerce.number().default(3000),
   BODY_LIMIT: z.string().default('10mb'),
 
   // Slack
   SLACK_BOT_TOKEN: z.string().startsWith('xoxb-'),
   SLACK_USER_TOKEN: z.string().startsWith('xoxp-'),
   SLACK_SIGNING_SECRET: z.string().min(1),
-  SLACK_APP_TOKEN: z.string().startsWith('xapp-').optional(),
 
   // LLM (both optional to allow graceful degradation)
   OPENAI_API_KEY: z.string().startsWith('sk-').optional(),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-').optional(),
   DEFAULT_LLM_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
   LLM_MODEL: z.string().default('gpt-4o'),
-  MAX_CONTEXT_TOKENS: z.string().transform(Number).default('8000'),
+  MAX_CONTEXT_TOKENS: z.coerce.number().default(8000),
 
   // Query limits
-  MAX_HISTORY_DAYS: z.string().transform(Number).default('90'),
-  DEFAULT_QUERY_LIMIT: z.string().transform(Number).default('50'),
-  MAX_QUERY_LIMIT: z.string().transform(Number).default('200'),
-
-  // Security
-  ENABLE_RATE_LIMIT: z
-    .string()
-    .transform(s => s === 'true')
-    .default('false'),
-  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'),
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),
+  MAX_HISTORY_DAYS: z.coerce.number().default(90),
+  DEFAULT_QUERY_LIMIT: z.coerce.number().default(50),
+  MAX_QUERY_LIMIT: z.coerce.number().default(200),
 
   // Webhook
-  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: z
-    .string()
-    .transform(s => s === 'true')
-    .default('true'),
-  WEBHOOK_DUPLICATE_EVENT_TTL_MS: z
-    .string()
-    .transform(Number)
-    .default('300000'),
-  WEBHOOK_PROCESSING_TIMEOUT_MS: z.string().transform(Number).default('25000'),
-  WEBHOOK_ENABLE_THREADING: z
-    .string()
-    .transform(s => s === 'true')
-    .default('true'),
-  WEBHOOK_ENABLE_DMS: z
-    .string()
-    .transform(s => s === 'true')
-    .default('true'),
-  WEBHOOK_MAX_RESPONSE_LENGTH: z.string().transform(Number).default('4000'),
+  WEBHOOK_ENABLE_SIGNATURE_VALIDATION: z.coerce.boolean().default(true),
+  WEBHOOK_DUPLICATE_EVENT_TTL_MS: z.coerce.number().default(300000),
+  WEBHOOK_PROCESSING_TIMEOUT_MS: z.coerce.number().default(25000),
+  WEBHOOK_ENABLE_THREADING: z.coerce.boolean().default(true),
+  WEBHOOK_ENABLE_DMS: z.coerce.boolean().default(true),
+  WEBHOOK_MAX_RESPONSE_LENGTH: z.coerce.number().default(4000),
 
   // Memory Configuration
-  MEMORY_ENABLED: z
-    .string()
-    .transform(s => s === 'true')
-    .default('true'),
-  MEMORY_MAX_TOKENS: z.string().transform(Number).default('200000'),
-  MEMORY_MAX_MESSAGES: z.string().transform(Number).default('200'),
-  MEMORY_SESSION_TTL_MINUTES: z.string().transform(Number).default('120'),
-  MEMORY_CLEANUP_INTERVAL_MINUTES: z.string().transform(Number).default('10'),
-  MEMORY_COMPRESSION_ENABLED: z
-    .string()
-    .transform(s => s === 'true')
-    .default('false'),
-  MEMORY_COMPRESSION_THRESHOLD: z.string().transform(Number).default('0.8'),
+  MEMORY_ENABLED: z.coerce.boolean().default(true),
+  MEMORY_MAX_TOKENS: z.coerce.number().default(200000),
+  MEMORY_MAX_MESSAGES: z.coerce.number().default(200),
+  MEMORY_SESSION_TTL_MINUTES: z.coerce.number().default(120),
+  MEMORY_CLEANUP_INTERVAL_MINUTES: z.coerce.number().default(10),
 
   // Session Configuration
-  SESSION_MAX_SESSIONS: z.string().transform(Number).default('1000'),
-  SESSION_MAX_SESSIONS_PER_USER: z.string().transform(Number).default('10'),
+  SESSION_MAX_SESSIONS: z.coerce.number().default(1000),
+  SESSION_MAX_SESSIONS_PER_USER: z.coerce.number().default(10),
 });
 
 /**
@@ -157,13 +126,6 @@ export class AppConfig {
    */
   public getQueryConfig(): QueryConfig {
     return this.config.query;
-  }
-
-  /**
-   * Get logging configuration
-   */
-  public getLoggingConfig(): LoggingConfig {
-    return this.config.logging;
   }
 
   /**
@@ -231,14 +193,12 @@ export class AppConfig {
     return {
       server: this.config.server,
       query: this.config.query,
-      logging: this.config.logging,
       security: this.config.security,
       slack: {
         ...this.config.slack,
         botToken: this.maskToken(this.config.slack.botToken),
         userToken: this.maskToken(this.config.slack.userToken),
         signingSecret: '[MASKED]',
-        appToken: this.config.slack.appToken ? '[MASKED]' : undefined,
       },
       llm: {
         ...this.config.llm,
@@ -283,7 +243,6 @@ export class AppConfig {
       port: env.PORT,
       environment: env.NODE_ENV,
       corsOrigins: this.determineCorsOrigins(env.NODE_ENV),
-      requestTimeout: env.REQUEST_TIMEOUT,
       bodyLimit: env.BODY_LIMIT,
     };
 
@@ -291,7 +250,6 @@ export class AppConfig {
       botToken: env.SLACK_BOT_TOKEN,
       userToken: env.SLACK_USER_TOKEN,
       signingSecret: env.SLACK_SIGNING_SECRET,
-      appToken: env.SLACK_APP_TOKEN,
       maxRetries: CONFIG_DEFAULTS.slack.maxRetries,
       retryBackoffMs: CONFIG_DEFAULTS.slack.retryBackoffMs,
       channelCacheExpiryMs: CONFIG_DEFAULTS.slack.channelCacheExpiryMs,
@@ -316,20 +274,8 @@ export class AppConfig {
       queryTimeoutMs: CONFIG_DEFAULTS.query.queryTimeoutMs,
     };
 
-    const loggingConfig: LoggingConfig = {
-      level: CONFIG_DEFAULTS.logging.level,
-      enableConsole: CONFIG_DEFAULTS.logging.enableConsole,
-      enableFileLogging: CONFIG_DEFAULTS.logging.enableFileLogging,
-      logDirectory: CONFIG_DEFAULTS.logging.logDirectory,
-      maxFileSize: CONFIG_DEFAULTS.logging.maxFileSize,
-      maxFiles: CONFIG_DEFAULTS.logging.maxFiles,
-    };
-
     const securityConfig: SecurityConfig = {
       enableHelmet: CONFIG_DEFAULTS.security.enableHelmet,
-      enableRateLimit: env.ENABLE_RATE_LIMIT,
-      rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
-      rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
       trustedProxies: [...CONFIG_DEFAULTS.security.trustedProxies],
     };
 
@@ -348,8 +294,6 @@ export class AppConfig {
       maxMessages: env.MEMORY_MAX_MESSAGES,
       sessionTTLMinutes: env.MEMORY_SESSION_TTL_MINUTES,
       cleanupIntervalMinutes: env.MEMORY_CLEANUP_INTERVAL_MINUTES,
-      compressionEnabled: env.MEMORY_COMPRESSION_ENABLED,
-      compressionThreshold: env.MEMORY_COMPRESSION_THRESHOLD,
     };
 
     const sessionConfig: SessionConfig = {
@@ -362,7 +306,6 @@ export class AppConfig {
       slack: slackConfig,
       llm: llmConfig,
       query: queryConfig,
-      logging: loggingConfig,
       security: securityConfig,
       webhook: webhookConfig,
       memory: memoryConfig,
