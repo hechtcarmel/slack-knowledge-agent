@@ -181,11 +181,13 @@ export class Application {
 
       this.server = this.options.app.listen(
         serverConfig.port,
+        serverConfig.host,
         (error?: Error) => {
           if (error) {
             reject(error);
           } else {
             this.logger.info('HTTP server listening', {
+              host: serverConfig.host,
               port: serverConfig.port,
               environment: serverConfig.environment,
             });

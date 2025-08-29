@@ -28,6 +28,7 @@ const EnvironmentSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: z.coerce.number().default(3000),
+  HOST: z.string().default('0.0.0.0'),
   BODY_LIMIT: z.string().default('10mb'),
 
   // Slack
@@ -241,6 +242,7 @@ export class AppConfig {
     // Build configuration sections
     const serverConfig: ServerConfig = {
       port: env.PORT,
+      host: env.HOST,
       environment: env.NODE_ENV,
       corsOrigins: this.determineCorsOrigins(env.NODE_ENV),
       bodyLimit: env.BODY_LIMIT,

@@ -7,6 +7,7 @@
 
 export interface ServerConfig {
   port: number;
+  host: string;
   environment: 'development' | 'production' | 'test';
   corsOrigins: string[];
   bodyLimit: string;
@@ -88,6 +89,7 @@ export interface EnvironmentVariables {
   // Server
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
+  HOST: string;
   BODY_LIMIT: string;
 
   // Slack
